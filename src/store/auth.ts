@@ -23,6 +23,7 @@ interface AuthState {
     password: string,
     firstName: string,
     lastName: string,
+    schoolId: string,
   ) => Promise<{ error: string | null; needsVerification?: boolean }>;
   signOut: () => Promise<void>;
   initialize: () => Promise<void>;
@@ -71,12 +72,16 @@ export const useAuthStore = create<AuthState>((set, get) => ({
     return { error: null };
   },
 
-  signUp: async (email, password, firstName, lastName) => {
+  signUp: async (email, password, firstName, lastName, schoolId) => {
     const { error } = await supabase.auth.signUp({
       email,
       password,
       options: {
-        data: { first_name: firstName, last_name: lastName },
+        data: {
+          first_name: firstName,
+          last_name: lastName,
+          school_id: schoolId,
+        },
       },
     });
     if (error) return { error: error.message };

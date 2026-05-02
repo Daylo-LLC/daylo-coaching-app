@@ -6,6 +6,9 @@ import {
   TouchableOpacity,
   Alert,
   ActivityIndicator,
+  KeyboardAvoidingView,
+  Platform,
+  ScrollView,
 } from "react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { useAuthStore } from "../../src/store/auth";
@@ -48,7 +51,7 @@ export default function VerifyEmailScreen() {
       } else {
         // Success - user will be automatically signed in
         Alert.alert("Success", "Email verified successfully!");
-        router.replace("/(tabs)/home");
+        router.replace("/");
       }
     } catch (err) {
       Alert.alert("Error", "Failed to verify code");
@@ -79,76 +82,107 @@ export default function VerifyEmailScreen() {
   };
 
   return (
-    <View style={{ flex: 1, backgroundColor: "#F9FAFB", padding: 24 }}>
-      <View style={{ flex: 1, justifyContent: "center" }}>
-        <Text style={{ fontSize: 32, fontWeight: "700", color: "#1B2A4A", marginBottom: 12 }}>
-          Verify Email
-        </Text>
-        <Text style={{ fontSize: 16, color: "#6B7280", marginBottom: 32 }}>
-          We've sent an 8-digit code to {email || profile?.email}. Enter it below to verify your email.
-        </Text>
-
-        <View style={{ marginBottom: 32 }}>
-          <Text style={{ fontSize: 14, fontWeight: "600", color: "#374151", marginBottom: 8 }}>
-            Verification Code
-          </Text>
-          <TextInput
-            value={code}
-            onChangeText={setCode}
-            placeholder="00000000"
-            keyboardType="numeric"
-            maxLength={8}
-            autoCapitalize="none"
-            autoComplete="one-time-code"
+    <KeyboardAvoidingView
+      style={{ flex: 1, backgroundColor: "#F9FAFB" }}
+      behavior={Platform.OS === "ios" ? "padding" : "height"}
+    >
+      <ScrollView
+        contentContainerStyle={{ padding: 24, flexGrow: 1 }}
+        keyboardShouldPersistTaps="handled"
+      >
+        <View style={{ flex: 1, justifyContent: "center" }}>
+          <Text
             style={{
-              borderWidth: 1,
-              borderColor: "#D1D5DB",
+              fontSize: 32,
+              fontWeight: "700",
+              color: "#1B2A4A",
+              marginBottom: 12,
+            }}
+          >
+            Verify Email
+          </Text>
+          <Text style={{ fontSize: 16, color: "#6B7280", marginBottom: 32 }}>
+            We've sent an 8-digit code to {email || profile?.email}. Enter it
+            below to verify your email.
+          </Text>
+
+          <View style={{ marginBottom: 32 }}>
+            <Text
+              style={{
+                fontSize: 14,
+                fontWeight: "600",
+                color: "#374151",
+                marginBottom: 8,
+              }}
+            >
+              Verification Code
+            </Text>
+            <TextInput
+              value={code}
+              onChangeText={setCode}
+              placeholder="00000000"
+              keyboardType="numeric"
+              maxLength={8}
+              autoCapitalize="none"
+              autoComplete="one-time-code"
+              style={{
+                borderWidth: 1,
+                borderColor: "#D1D5DB",
+                borderRadius: 8,
+                padding: 16,
+                fontSize: 20,
+                letterSpacing: 4,
+                textAlign: "center",
+                backgroundColor: "#FFFFFF",
+              }}
+            />
+          </View>
+
+          <TouchableOpacity
+            onPress={handleVerify}
+            disabled={loading || code.length !== 8}
+            style={{
+              backgroundColor:
+                loading || code.length !== 8 ? "#9CA3AF" : "#1B2A4A",
               borderRadius: 8,
               padding: 16,
-              fontSize: 20,
-              letterSpacing: 4,
-              textAlign: "center",
-              backgroundColor: "#FFFFFF",
+              alignItems: "center",
+              marginBottom: 16,
             }}
-          />
+          >
+            {loading ? (
+              <ActivityIndicator color="#FFFFFF" />
+            ) : (
+              <Text
+                style={{ color: "#FFFFFF", fontWeight: "700", fontSize: 16 }}
+              >
+                Verify Email
+              </Text>
+            )}
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            onPress={handleResend}
+            disabled={resending || timeLeft > 0}
+            style={{ alignItems: "center" }}
+          >
+            {resending ? (
+              <ActivityIndicator size="small" color="#6B7280" />
+            ) : (
+              <Text
+                style={{
+                  color: timeLeft > 0 ? "#9CA3AF" : "#6B7280",
+                  fontSize: 14,
+                }}
+              >
+                {timeLeft > 0
+                  ? `Resend code in ${timeLeft}s`
+                  : "Didn't receive the code? Resend"}
+              </Text>
+            )}
+          </TouchableOpacity>
         </View>
-
-        <TouchableOpacity
-          onPress={handleVerify}
-          disabled={loading || code.length !== 8}
-          style={{
-            backgroundColor: loading || code.length !== 8 ? "#9CA3AF" : "#1B2A4A",
-            borderRadius: 8,
-            padding: 16,
-            alignItems: "center",
-            marginBottom: 16,
-          }}
-        >
-          {loading ? (
-            <ActivityIndicator color="#FFFFFF" />
-          ) : (
-            <Text style={{ color: "#FFFFFF", fontWeight: "700", fontSize: 16 }}>
-              Verify Email
-            </Text>
-          )}
-        </TouchableOpacity>
-
-        <TouchableOpacity
-          onPress={handleResend}
-          disabled={resending || timeLeft > 0}
-          style={{ alignItems: "center" }}
-        >
-          {resending ? (
-            <ActivityIndicator size="small" color="#6B7280" />
-          ) : (
-            <Text style={{ color: timeLeft > 0 ? "#9CA3AF" : "#6B7280", fontSize: 14 }}>
-              {timeLeft > 0
-                ? `Resend code in ${timeLeft}s`
-                : "Didn't receive the code? Resend"}
-            </Text>
-          )}
-        </TouchableOpacity>
-      </View>
-    </View>
+      </ScrollView>
+    </KeyboardAvoidingView>
   );
 }

@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useEffect, useState } from "react";
 import {
   View,
   Text,
@@ -9,11 +9,13 @@ import {
   TextInput,
   Modal,
 } from "react-native";
-import { useLocalSearchParams, Stack } from "expo-router";
+import moment from "moment";
+import { useLocalSearchParams } from "expo-router";
 import { useAuthStore } from "../../src/store/auth";
 import { supabase } from "../../src/lib/supabase";
 import { Tables } from "../../src/types/database";
 import { Phone, Mail, MapPin } from "lucide-react-native";
+import PageHeader from "@/components/PageHeader";
 
 type School = Tables<"schools">;
 type Availability = Tables<"availability">;
@@ -91,11 +93,19 @@ export default function SchoolDetail() {
   const sendRequest = async () => {
     if (!profile || !selectedSlot || !message.trim()) return;
 
+    if (!profile.school_id) {
+      Alert.alert(
+        "Error",
+        "You must be associated with a school to request a game.",
+      );
+      return;
+    }
+
     setSending(true);
     try {
       const { error } = await supabase.from("requests").insert({
         requester_id: profile.id,
-        requester_school_id: "", // Will be set by trigger
+        requester_school_id: profile.school_id,
         recipient_id: selectedSlot.coach_id,
         recipient_school_id: id,
         availability_id: selectedSlot.id,
@@ -149,7 +159,7 @@ export default function SchoolDetail() {
 
   return (
     <>
-      <Stack.Screen options={{ title: school.name }} />
+      <PageHeader title={`${school.name.substring(0, 20)}...`} />
       <ScrollView style={{ flex: 1, backgroundColor: "#F9FAFB" }}>
         <View style={{ padding: 16 }}>
           {/* School Info */}
@@ -378,6 +388,7 @@ export default function SchoolDetail() {
                           color: "#1B2A4A",
                         }}
                       >
+                        Date:{" "}
                         {new Date(
                           slot.date + " " + slot.time_start,
                         ).toLocaleDateString()}
@@ -385,12 +396,13 @@ export default function SchoolDetail() {
                       <Text
                         style={{ fontSize: 12, color: "#6B7280", marginTop: 2 }}
                       >
-                        {slot.time_start}
+                        Time:{" "}
+                        {moment(slot.time_start, "HH:mm:ss").format("h:mm A")}
                       </Text>
                       <Text
                         style={{ fontSize: 12, color: "#6B7280", marginTop: 2 }}
                       >
-                        {slot.sport}
+                        Sport: {slot.sport}
                       </Text>
                       {slot.venue && (
                         <View
@@ -480,7 +492,8 @@ export default function SchoolDetail() {
                 {new Date(
                   selectedSlot.date + " " + selectedSlot.time_start,
                 ).toLocaleDateString()}{" "}
-                at {selectedSlot.time_start}
+                at{" "}
+                {moment(selectedSlot.time_start, "HH:mm:ss").format("h:mm A")}
               </Text>
             )}
             <TextInput

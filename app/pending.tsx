@@ -6,6 +6,11 @@ export default function Pending() {
   const router = useRouter();
   const { signOut, fetchProfile, profile } = useAuthStore();
 
+  const handleSignOut = async () => {
+    await signOut();
+    router.push("/sign-in");
+  };
+
   return (
     <View
       style={{
@@ -81,7 +86,7 @@ export default function Pending() {
       </TouchableOpacity>
 
       <TouchableOpacity
-        onPress={signOut}
+        onPress={handleSignOut}
         style={{
           borderWidth: 1,
           borderColor: "#D1D5DB",

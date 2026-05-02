@@ -6,29 +6,55 @@ import {
   TouchableOpacity,
   RefreshControl,
   ActivityIndicator,
+  Button,
+  StyleSheet,
 } from "react-native";
 import { router } from "expo-router";
 import { useAuthStore } from "../../../src/store/auth";
 import { supabase } from "../../../src/lib/supabase";
 import { Tables } from "../../../src/types/database";
+import Header from "@/components/Header";
+import moment from "moment";
+import { navigate } from "expo-router/build/global-state/routing";
 
-type Request = Tables<"requests">;
+type Request = Tables<"requests"> & {
+  requester_school?: {
+    name: string;
+    city: string | null;
+    state: string | null;
+  };
+  recipient_school?: {
+    name: string;
+    city: string | null;
+    state: string | null;
+  };
+};
 type Availability = Tables<"availability">;
 
+type SchoolWithCoachSchools = Tables<"schools"> & {
+  coach_schools: Array<{
+    sport: string;
+  }>;
+};
+
 export default function Home() {
-  const { profile, signOut } = useAuthStore();
+  const { profile } = useAuthStore();
   const [upcomingGames, setUpcomingGames] = useState<Request[]>([]);
   const [pendingRequests, setPendingRequests] = useState<Request[]>([]);
   const [openSlots, setOpenSlots] = useState<Availability[]>([]);
+  const [school, setSchool] = useState<SchoolWithCoachSchools | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [activeTab, setActiveTab] = useState<"schedule" | "requests">(
+    "schedule",
+  );
 
   const fetchDashboard = useCallback(async () => {
-    if (!profile) return;
+    if (!profile || !profile.school_id) return;
 
     const today = new Date().toISOString().split("T")[0];
 
-    const [gamesRes, requestsRes, slotsRes] = await Promise.all([
+    const [gamesRes, requestsRes, slotsRes, schoolRes] = await Promise.all([
       supabase
         .from("requests")
         .select("*")
@@ -52,13 +78,48 @@ export default function Home() {
         .gte("date", today)
         .order("date", { ascending: true })
         .limit(5),
+      supabase
+        .from("schools")
+        .select("*, coach_schools (sport)")
+        .eq("id", profile.school_id),
     ]);
 
-    setUpcomingGames(gamesRes.data || []);
-    setPendingRequests(requestsRes.data || []);
     setOpenSlots(slotsRes.data || []);
+    setSchool(schoolRes.data?.[0] || null);
+
+    // Collect all school IDs from both accepted games and pending requests
+    const allRequests = [...(gamesRes.data || []), ...(requestsRes.data || [])];
+    const schoolIds = new Set<string>();
+    allRequests.forEach((r) => {
+      if (r.requester_school_id) schoolIds.add(r.requester_school_id);
+      if (r.recipient_school_id) schoolIds.add(r.recipient_school_id);
+    });
+
+    let schoolMap = new Map<
+      string,
+      { id: string; name: string; city: string | null; state: string | null }
+    >();
+    if (schoolIds.size > 0) {
+      const { data: schoolsData } = await supabase
+        .from("schools")
+        .select("id, name, city, state")
+        .in("id", Array.from(schoolIds));
+      schoolMap = new Map(schoolsData?.map((s) => [s.id, s]) || []);
+    }
+
+    const attachSchools = (r: any) => ({
+      ...r,
+      requester_school: schoolMap.get(r.requester_school_id),
+      recipient_school: schoolMap.get(r.recipient_school_id),
+    });
+
+    setUpcomingGames((gamesRes.data || []).map(attachSchools));
+    setPendingRequests((requestsRes.data || []).map(attachSchools));
+
     setLoading(false);
   }, [profile]);
+
+  console.log("school", JSON.stringify(school, null, 2));
 
   useEffect(() => {
     fetchDashboard();
@@ -79,205 +140,293 @@ export default function Home() {
   }
 
   return (
-    <ScrollView
-      style={{ flex: 1 }}
-      contentContainerStyle={{ padding: 16 }}
-      refreshControl={
-        <RefreshControl
-          refreshing={refreshing}
-          onRefresh={onRefresh}
-          tintColor="#1B2A4A"
-        />
-      }
-    >
-      <View
-        style={{
-          flexDirection: "row",
-          justifyContent: "space-between",
-          alignItems: "center",
-          marginBottom: 24,
-        }}
+    <>
+      <Header title="DAYLO" />
+      <ScrollView
+        style={{ flex: 1 }}
+        contentContainerStyle={{ padding: 16 }}
+        refreshControl={
+          <RefreshControl
+            refreshing={refreshing}
+            onRefresh={onRefresh}
+            tintColor="#1B2A4A"
+          />
+        }
       >
-        <View>
-          <Text style={{ fontSize: 24, fontWeight: "800", color: "#1B2A4A" }}>
-            Welcome, {profile?.first_name || "Coach"}
-          </Text>
-          <Text style={{ fontSize: 14, color: "#6B7280", marginTop: 2 }}>
-            Here's your scheduling overview
-          </Text>
+        <View style={styles.schoolInfo}>
+          <View style={{ width: "70%" }}>
+            <Text style={styles.schoolName}>{school?.name}</Text>
+            <Text>{school?.county}</Text>
+            <Text style={{ color: "#6B7280", marginVertical: 4 }}>
+              {school?.coach_schools?.[0]?.sport
+                ? school?.coach_schools[0].sport.charAt(0).toUpperCase() +
+                  school?.coach_schools[0].sport.slice(1)
+                : ""}{" "}
+              • {school?.division}
+            </Text>
+          </View>
+          <View style={{ width: "30%" }}>
+            <Button color="#1B2A4A" title="Add Game" onPress={() => {router.push("/search")}} />
+          </View>
         </View>
-        <TouchableOpacity onPress={signOut}>
-          <Text style={{ color: "#EF4444", fontWeight: "600" }}>Sign Out</Text>
-        </TouchableOpacity>
-      </View>
 
-      {/* Pending Requests */}
-      <View
-        style={{
-          backgroundColor: "#FFFFFF",
-          borderRadius: 12,
-          padding: 16,
-          marginBottom: 16,
-          shadowColor: "#000",
-          shadowOpacity: 0.05,
-          shadowRadius: 10,
-          elevation: 2,
-        }}
-      >
-        <View
-          style={{
-            flexDirection: "row",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: 12,
-          }}
-        >
-          <Text style={{ fontSize: 18, fontWeight: "700", color: "#1B2A4A" }}>
-            Pending Requests
-          </Text>
-          <TouchableOpacity onPress={() => router.push("/(tabs)/requests")}>
-            <Text style={{ color: "#F97316", fontWeight: "600", fontSize: 14 }}>
-              View All
+        {/* Tabs */}
+        <View style={styles.tabContainer}>
+          <TouchableOpacity
+            style={[styles.tab, activeTab === "schedule" && styles.activeTab]}
+            onPress={() => setActiveTab("schedule")}
+          >
+            <Text
+              style={[
+                styles.tabText,
+                activeTab === "schedule" && styles.activeTabText,
+              ]}
+            >
+              My Schedule
+            </Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[styles.tab, activeTab === "requests" && styles.activeTab]}
+            onPress={() => setActiveTab("requests")}
+          >
+            <Text
+              style={[
+                styles.tabText,
+                activeTab === "requests" && styles.activeTabText,
+              ]}
+            >
+              Game Requests
             </Text>
           </TouchableOpacity>
         </View>
-        {pendingRequests.length === 0 ? (
-          <Text style={{ color: "#9CA3AF", fontSize: 14 }}>
-            No pending requests
-          </Text>
-        ) : (
-          pendingRequests.map((req) => (
-            <View
-              key={req.id}
-              style={{
-                borderBottomWidth: 1,
-                borderBottomColor: "#F3F4F6",
-                paddingVertical: 10,
-              }}
-            >
-              <Text
-                style={{ fontSize: 14, fontWeight: "600", color: "#374151" }}
-              >
-                {req.sport.charAt(0).toUpperCase() + req.sport.slice(1)} —{" "}
-                {req.date}
-              </Text>
-              <Text style={{ fontSize: 12, color: "#9CA3AF", marginTop: 2 }}>
-                {req.time_start} – {req.time_end} • {req.home_away}
-              </Text>
-            </View>
-          ))
-        )}
-      </View>
 
-      {/* Upcoming Games */}
-      <View
-        style={{
-          backgroundColor: "#FFFFFF",
-          borderRadius: 12,
-          padding: 16,
-          marginBottom: 16,
-          shadowColor: "#000",
-          shadowOpacity: 0.05,
-          shadowRadius: 10,
-          elevation: 2,
-        }}
-      >
-        <Text
-          style={{
-            fontSize: 18,
-            fontWeight: "700",
-            color: "#1B2A4A",
-            marginBottom: 12,
-          }}
-        >
-          Upcoming Games
-        </Text>
-        {upcomingGames.length === 0 ? (
-          <Text style={{ color: "#9CA3AF", fontSize: 14 }}>
-            No upcoming games scheduled
-          </Text>
-        ) : (
-          upcomingGames.map((game) => (
+        {activeTab === "schedule" ? (
+          <>
+            {/* Upcoming Games */}
             <View
-              key={game.id}
               style={{
-                borderBottomWidth: 1,
-                borderBottomColor: "#F3F4F6",
-                paddingVertical: 10,
+                backgroundColor: "#FFFFFF",
+                borderRadius: 12,
+                padding: 16,
+                marginBottom: 16,
+                shadowColor: "#000",
+                shadowOpacity: 0.05,
+                shadowRadius: 10,
+                elevation: 2,
               }}
             >
               <Text
-                style={{ fontSize: 14, fontWeight: "600", color: "#374151" }}
+                style={{
+                  fontSize: 18,
+                  fontWeight: "700",
+                  color: "#1B2A4A",
+                  marginBottom: 12,
+                }}
               >
-                {game.sport.charAt(0).toUpperCase() + game.sport.slice(1)} —{" "}
-                {game.date}
+                Season Schedule
               </Text>
-              <Text style={{ fontSize: 12, color: "#9CA3AF", marginTop: 2 }}>
-                {game.time_start} – {game.time_end} • {game.venue || "TBD"}
-              </Text>
+              {upcomingGames.length === 0 ? (
+                <Text style={{ color: "#9CA3AF", fontSize: 14 }}>
+                  No upcoming games scheduled
+                </Text>
+              ) : (
+                upcomingGames.map((game) => {
+                  const opposingSchool =
+                    game.requester_id === profile?.id
+                      ? game.recipient_school
+                      : game.requester_school;
+                  return (
+                    <View
+                      key={game.id}
+                      style={{
+                        borderBottomWidth: 1,
+                        borderBottomColor: "#F3F4F6",
+                        paddingVertical: 10,
+                      }}
+                    >
+                      <Text
+                        style={{
+                          fontSize: 14,
+                          fontWeight: "600",
+                          color: "#374151",
+                        }}
+                      >
+                        {game.sport.charAt(0).toUpperCase() +
+                          game.sport.slice(1)}{" "}
+                        — {moment(game.date).format("MMM D, YYYY")}
+                      </Text>
+                      {opposingSchool && (
+                        <Text
+                          style={{
+                            fontSize: 12,
+                            color: "#6B7280",
+                            marginTop: 2,
+                          }}
+                        >
+                          vs. {opposingSchool.name}
+                        </Text>
+                      )}
+                      <Text
+                        style={{ fontSize: 12, color: "#9CA3AF", marginTop: 2 }}
+                      >
+                        {moment(game.time_start, "HH:mm").format("h:mm A")} –{" "}
+                        {moment(game.time_end, "HH:mm").format("h:mm A")} •{" "}
+                        {game.venue || "TBD"}
+                      </Text>
+                    </View>
+                  );
+                })
+              )}
             </View>
-          ))
-        )}
-      </View>
-
-      {/* Open Availability */}
-      <View
-        style={{
-          backgroundColor: "#FFFFFF",
-          borderRadius: 12,
-          padding: 16,
-          marginBottom: 16,
-          shadowColor: "#000",
-          shadowOpacity: 0.05,
-          shadowRadius: 10,
-          elevation: 2,
-        }}
-      >
-        <View
-          style={{
-            flexDirection: "row",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: 12,
-          }}
-        >
-          <Text style={{ fontSize: 18, fontWeight: "700", color: "#1B2A4A" }}>
-            Your Open Slots
-          </Text>
-          <TouchableOpacity onPress={() => router.push("/(tabs)/availability")}>
-            <Text style={{ color: "#F97316", fontWeight: "600", fontSize: 14 }}>
-              Manage
-            </Text>
-          </TouchableOpacity>
-        </View>
-        {openSlots.length === 0 ? (
-          <Text style={{ color: "#9CA3AF", fontSize: 14 }}>
-            No open availability slots
-          </Text>
+          </>
         ) : (
-          openSlots.map((slot) => (
+          <>
+            {/* Pending Requests */}
             <View
-              key={slot.id}
               style={{
-                borderBottomWidth: 1,
-                borderBottomColor: "#F3F4F6",
-                paddingVertical: 10,
+                backgroundColor: "#FFFFFF",
+                borderRadius: 12,
+                padding: 16,
+                marginBottom: 16,
+                shadowColor: "#000",
+                shadowOpacity: 0.05,
+                shadowRadius: 10,
+                elevation: 2,
               }}
             >
-              <Text
-                style={{ fontSize: 14, fontWeight: "600", color: "#374151" }}
+              <View
+                style={{
+                  flexDirection: "row",
+                  justifyContent: "space-between",
+                  alignItems: "center",
+                  marginBottom: 12,
+                }}
               >
-                {slot.sport.charAt(0).toUpperCase() + slot.sport.slice(1)} —{" "}
-                {slot.date}
-              </Text>
-              <Text style={{ fontSize: 12, color: "#9CA3AF", marginTop: 2 }}>
-                {slot.time_start} – {slot.time_end} •{" "}
-                {slot.home_away_preference} • {slot.venue || "Flexible"}
-              </Text>
+                <Text
+                  style={{ fontSize: 18, fontWeight: "700", color: "#1B2A4A" }}
+                >
+                  Pending Requests
+                </Text>
+                <TouchableOpacity
+                  onPress={() => router.push("/(tabs)/requests")}
+                >
+                  <Text
+                    style={{
+                      color: "#F97316",
+                      fontWeight: "600",
+                      fontSize: 14,
+                    }}
+                  >
+                    View All
+                  </Text>
+                </TouchableOpacity>
+              </View>
+              {pendingRequests.length === 0 ? (
+                <Text style={{ color: "#9CA3AF", fontSize: 14 }}>
+                  No pending requests
+                </Text>
+              ) : (
+                pendingRequests.map((req) => (
+                  <View
+                    key={req.id}
+                    style={{
+                      borderBottomWidth: 1,
+                      borderBottomColor: "#F3F4F6",
+                      paddingVertical: 10,
+                    }}
+                  >
+                    <TouchableOpacity
+                      onPress={() => router.push(`/request/${req.id}`)}
+                    >
+                      <Text
+                        style={{
+                          fontSize: 14,
+                          fontWeight: "600",
+                          color: "#374151",
+                        }}
+                      >
+                        {req.sport.charAt(0).toUpperCase() + req.sport.slice(1)}{" "}
+                        — {moment(req.date).format("MMM D, YYYY")}
+                      </Text>
+                      {req.requester_school && (
+                        <Text
+                          style={{
+                            fontSize: 12,
+                            color: "#6B7280",
+                            marginTop: 2,
+                          }}
+                        >
+                          From: {req.requester_school.name}
+                        </Text>
+                      )}
+                      <Text
+                        style={{ fontSize: 12, color: "#9CA3AF", marginTop: 2 }}
+                      >
+                        {moment(req.time_start, "HH:mm").format("h:mm A")} –{" "}
+                        {moment(req.time_end, "HH:mm").format("h:mm A")} •{" "}
+                        {req.home_away}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                ))
+              )}
             </View>
-          ))
+          </>
         )}
-      </View>
-    </ScrollView>
+      </ScrollView>
+    </>
   );
 }
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: "#F9FAFB",
+    padding: 16,
+  },
+  schoolInfo: {
+    marginBottom: 16,
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  schoolName: {
+    fontSize: 32,
+    fontWeight: "bold",
+    color: "#1B2A4A",
+    flexWrap: "wrap",
+    paddingVertical: 15,
+  },
+  addButton: {
+    backgroundColor: "1B2A4A",
+  },
+  tabContainer: {
+    flexDirection: "row",
+    backgroundColor: "#F3F4F6",
+    borderRadius: 8,
+    padding: 4,
+    marginBottom: 16,
+  },
+  tab: {
+    flex: 1,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderRadius: 6,
+    alignItems: "center",
+  },
+  activeTab: {
+    backgroundColor: "#FFFFFF",
+    shadowColor: "#000",
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  tabText: {
+    fontSize: 14,
+    fontWeight: "600",
+    color: "#6B7280",
+  },
+  activeTabText: {
+    color: "#1B2A4A",
+  },
+});

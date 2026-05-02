@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { Link, router } from "expo-router";
 import { useAuthStore } from "../../src/store/auth";
+import SchoolSearch from "../../src/components/SchoolSearch";
 
 export default function SignUp() {
   const [firstName, setFirstName] = useState("");
@@ -18,13 +19,17 @@ export default function SignUp() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
+  const [selectedSchool, setSelectedSchool] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const signUp = useAuthStore((s) => s.signUp);
 
   const handleSignUp = async () => {
-    if (!firstName || !lastName || !email || !password) {
-      setError("Please fill in all fields.");
+    if (!firstName || !lastName || !email || !password || !selectedSchool) {
+      setError("Please fill in all fields, including your school.");
       return;
     }
     if (password !== confirmPassword) {
@@ -42,6 +47,7 @@ export default function SignUp() {
       password,
       firstName.trim(),
       lastName.trim(),
+      selectedSchool.id,
     );
     setLoading(false);
     if (result.error) {
@@ -178,6 +184,11 @@ export default function SignUp() {
           autoCapitalize="none"
           keyboardType="email-address"
           autoComplete="email"
+        />
+
+        <SchoolSearch
+          onSelect={setSelectedSchool}
+          selectedSchool={selectedSchool}
         />
 
         <Text

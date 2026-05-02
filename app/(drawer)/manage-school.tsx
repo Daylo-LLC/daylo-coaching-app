@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   View,
   Text,
@@ -7,437 +7,865 @@ import {
   ScrollView,
   Alert,
   ActivityIndicator,
-  Switch,
 } from "react-native";
-import { useRouter } from "expo-router";
 import { useAuthStore } from "../../src/store/auth";
 import { supabase } from "../../src/lib/supabase";
 import { Tables } from "../../src/types/database";
+import SchoolSearch from "../../src/components/SchoolSearch";
+import Header from "@/components/Header";
 
-type School = Tables<"schools">;
 type CoachSchool = Tables<"coach_schools">;
+type SchoolChangeRequest = Tables<"school_change_requests">;
+
+const SPORTS = ["football", "soccer"] as const;
+const DIVISIONS = [
+  "A-Public",
+  "A-Private",
+  "2A",
+  "3A",
+  "4A",
+  "5A",
+  "6A",
+  "7A",
+] as const;
 
 export default function ManageSchoolScreen() {
-  const router = useRouter();
-  const { profile } = useAuthStore();
-  const [loading, setLoading] = useState(false);
-  const [schools, setSchools] = useState<School[]>([]);
+  const { profile, fetchProfile } = useAuthStore();
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+
+  // School info
+  const [school, setSchool] = useState<{
+    id: string;
+    name: string;
+    city: string | null;
+    state: string | null;
+    division: string | null;
+  } | null>(null);
+
+  // Coach-school links
   const [coachSchools, setCoachSchools] = useState<CoachSchool[]>([]);
-  const [showAddForm, setShowAddForm] = useState(false);
-  const [searchQuery, setSearchQuery] = useState("");
-  const [formData, setFormData] = useState({
-    school_id: "",
-    sport: "",
-    is_primary: false,
-  });
 
-  useEffect(() => {
-    fetchSchools();
-    fetchCoachSchools();
-  }, []);
+  // Division editing
+  const [editingDivision, setEditingDivision] = useState(false);
+  const [selectedDivision, setSelectedDivision] = useState<string>("");
 
-  const fetchSchools = async () => {
-    const { data } = await supabase
-      .from("schools")
-      .select("*")
-      .ilike("name", `%${searchQuery}%`)
-      .order("name");
-    setSchools(data || []);
-  };
+  // Add sport
+  const [showAddSport, setShowAddSport] = useState(false);
+  const [newSport, setNewSport] = useState<string>("");
 
-  const fetchCoachSchools = async () => {
-    if (!profile) return;
-    const { data } = await supabase
-      .from("coach_schools")
-      .select("*, schools(*)")
-      .eq("coach_id", profile.id);
-    setCoachSchools(data || []);
-  };
+  // School change request
+  const [showChangeRequest, setShowChangeRequest] = useState(false);
+  const [changeSchool, setChangeSchool] = useState<{
+    id: string;
+    name: string;
+  } | null>(null);
+  const [changeReason, setChangeReason] = useState("");
+  const [pendingRequests, setPendingRequests] = useState<SchoolChangeRequest[]>(
+    [],
+  );
 
-  const handleAddSchool = async () => {
-    if (!profile || !formData.school_id || !formData.sport) {
-      Alert.alert("Error", "Please select a school and sport");
+  const fetchData = useCallback(async () => {
+    if (!profile?.school_id) {
+      setLoading(false);
       return;
     }
 
-    setLoading(true);
-    try {
-      // Check if already associated
-      const { data: existing } = await supabase
-        .from("coach_schools")
-        .select("*")
-        .eq("coach_id", profile.id)
-        .eq("school_id", formData.school_id)
-        .eq("sport", formData.sport)
-        .single();
+    // Fetch school
+    const { data: schoolData } = await supabase
+      .from("schools")
+      .select("id, name, city, state, division")
+      .eq("id", profile.school_id)
+      .single();
 
-      if (existing) {
-        Alert.alert(
-          "Error",
-          "You're already associated with this school for this sport",
-        );
-        return;
-      }
+    if (schoolData) {
+      setSchool(schoolData);
+      setSelectedDivision(schoolData.division || "");
+    }
 
-      const { error } = await supabase.from("coach_schools").insert({
-        coach_id: profile.id,
-        school_id: formData.school_id,
-        sport: formData.sport,
-        is_primary: formData.is_primary,
-      });
+    // Fetch coach_schools
+    const { data: csData } = await supabase
+      .from("coach_schools")
+      .select("*")
+      .eq("coach_id", profile.id);
+    setCoachSchools(csData || []);
 
-      if (error) {
-        Alert.alert("Error", error.message);
-      } else {
-        Alert.alert("Success", "School added successfully");
-        setShowAddForm(false);
-        setFormData({ school_id: "", sport: "", is_primary: false });
-        fetchCoachSchools();
-      }
-    } catch (error) {
-      Alert.alert("Error", "Failed to add school");
-    } finally {
-      setLoading(false);
+    // Fetch pending change requests
+    const { data: reqData } = await supabase
+      .from("school_change_requests")
+      .select("*")
+      .eq("coach_id", profile.id)
+      .order("created_at", { ascending: false });
+    setPendingRequests(reqData || []);
+
+    setLoading(false);
+  }, [profile]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  const handleSaveDivision = async () => {
+    if (!school || !selectedDivision) return;
+    setSaving(true);
+    const { error } = await supabase
+      .from("schools")
+      .update({ division: selectedDivision })
+      .eq("id", school.id);
+    setSaving(false);
+    if (error) {
+      Alert.alert("Error", error.message);
+    } else {
+      setSchool({ ...school, division: selectedDivision });
+      setEditingDivision(false);
+      Alert.alert("Success", "Division updated.");
     }
   };
 
-  const handleRemoveSchool = async (coachSchoolId: string) => {
-    Alert.alert(
-      "Remove School",
-      "Are you sure you want to remove this school association?",
-      [
-        { text: "Cancel", style: "cancel" },
-        {
-          text: "Remove",
-          style: "destructive",
-          onPress: async () => {
-            const { error } = await supabase
-              .from("coach_schools")
-              .delete()
-              .eq("id", coachSchoolId);
-
-            if (error) {
-              Alert.alert("Error", error.message);
-            } else {
-              Alert.alert("Success", "School removed successfully");
-              fetchCoachSchools();
-            }
-          },
-        },
-      ],
-    );
+  const handleChangeSport = async (
+    coachSchoolId: string,
+    newSportVal: string,
+  ) => {
+    setSaving(true);
+    const { error } = await supabase
+      .from("coach_schools")
+      .update({ sport: newSportVal })
+      .eq("id", coachSchoolId);
+    setSaving(false);
+    if (error) {
+      Alert.alert("Error", error.message);
+    } else {
+      fetchData();
+    }
   };
 
-  const SPORTS = [
-    "football",
-    "soccer",
-    "basketball",
-    "baseball",
-    "softball",
-    "volleyball",
-  ];
+  const handleAddSport = async () => {
+    if (!profile || !school || !newSport) return;
+
+    // Check if already exists
+    const existing = coachSchools.find(
+      (cs) => cs.sport === newSport && cs.school_id === school.id,
+    );
+    if (existing) {
+      Alert.alert("Error", "You already coach this sport at this school.");
+      return;
+    }
+
+    setSaving(true);
+    const { error } = await supabase.from("coach_schools").insert({
+      coach_id: profile.id,
+      school_id: school.id,
+      sport: newSport,
+      is_primary: coachSchools.length === 0,
+    });
+    setSaving(false);
+    if (error) {
+      Alert.alert("Error", error.message);
+    } else {
+      setShowAddSport(false);
+      setNewSport("");
+      fetchData();
+    }
+  };
+
+  const handleRemoveSport = async (coachSchoolId: string) => {
+    Alert.alert("Remove Sport", "Are you sure you want to remove this sport?", [
+      { text: "Cancel", style: "cancel" },
+      {
+        text: "Remove",
+        style: "destructive",
+        onPress: async () => {
+          const { error } = await supabase
+            .from("coach_schools")
+            .delete()
+            .eq("id", coachSchoolId);
+          if (error) {
+            Alert.alert("Error", error.message);
+          } else {
+            fetchData();
+          }
+        },
+      },
+    ]);
+  };
+
+  const handleSubmitChangeRequest = async () => {
+    if (!profile || !school || !changeSchool) return;
+
+    if (changeSchool.id === school.id) {
+      Alert.alert("Error", "You are already at this school.");
+      return;
+    }
+
+    setSaving(true);
+    const { error } = await supabase.from("school_change_requests").insert({
+      coach_id: profile.id,
+      current_school_id: school.id,
+      requested_school_id: changeSchool.id,
+      reason: changeReason.trim() || null,
+    });
+    setSaving(false);
+    if (error) {
+      Alert.alert("Error", error.message);
+    } else {
+      Alert.alert(
+        "Success",
+        "School change request submitted. An admin will review it.",
+      );
+      setShowChangeRequest(false);
+      setChangeSchool(null);
+      setChangeReason("");
+      fetchData();
+    }
+  };
+
+  if (loading) {
+    return (
+      <View
+        style={{
+          flex: 1,
+          justifyContent: "center",
+          alignItems: "center",
+          backgroundColor: "#F9FAFB",
+        }}
+      >
+        <ActivityIndicator size="large" color="#1B2A4A" />
+      </View>
+    );
+  }
 
   return (
-    <ScrollView style={{ flex: 1, backgroundColor: "#F9FAFB" }}>
-      <View style={{ padding: 16 }}>
-        {/* My Schools */}
-        <Text
-          style={{
-            fontSize: 20,
-            fontWeight: "700",
-            color: "#1B2A4A",
-            marginBottom: 16,
-          }}
-        >
-          My Schools
-        </Text>
-
-        {coachSchools.length === 0 ? (
-          <View
+    <>
+    <Header title="Manage School" />
+      <ScrollView style={{ flex: 1, backgroundColor: "#F9FAFB" }}>
+        <View style={{ padding: 16 }}>
+          {/* Current School Card */}
+          <Text
             style={{
-              backgroundColor: "#FFFFFF",
-              borderRadius: 12,
-              padding: 20,
-              alignItems: "center",
-              marginBottom: 24,
+              fontSize: 20,
+              fontWeight: "700",
+              color: "#1B2A4A",
+              marginBottom: 16,
             }}
           >
-            <Text style={{ color: "#6B7280", fontSize: 14 }}>
-              No schools associated yet. Add your first school below.
-            </Text>
-          </View>
-        ) : (
-          coachSchools.map((cs) => (
+            My School
+          </Text>
+
+          {school ? (
             <View
-              key={cs.id}
+              style={{
+                backgroundColor: "#FFFFFF",
+                borderRadius: 12,
+                padding: 20,
+                marginBottom: 24,
+              }}
+            >
+              <Text
+                style={{ fontSize: 18, fontWeight: "700", color: "#1B2A4A" }}
+              >
+                {school.name}
+              </Text>
+              {school.city && school.state && (
+                <Text style={{ fontSize: 14, color: "#6B7280", marginTop: 4 }}>
+                  {school.city}, {school.state}
+                </Text>
+              )}
+
+              {/* Division */}
+              <View
+                style={{
+                  marginTop: 16,
+                  paddingTop: 16,
+                  borderTopWidth: 1,
+                  borderTopColor: "#F3F4F6",
+                }}
+              >
+                <View
+                  style={{
+                    flexDirection: "row",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontSize: 14,
+                      fontWeight: "600",
+                      color: "#374151",
+                    }}
+                  >
+                    GHSA Classification
+                  </Text>
+                  {!editingDivision && (
+                    <TouchableOpacity onPress={() => setEditingDivision(true)}>
+                      <Text
+                        style={{
+                          fontSize: 14,
+                          fontWeight: "600",
+                          color: "#F97316",
+                        }}
+                      >
+                        Edit
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+
+                {editingDivision ? (
+                  <View style={{ marginTop: 12 }}>
+                    <View
+                      style={{
+                        flexDirection: "row",
+                        flexWrap: "wrap",
+                        gap: 8,
+                        marginBottom: 16,
+                      }}
+                    >
+                      {DIVISIONS.map((d) => (
+                        <TouchableOpacity
+                          key={d}
+                          onPress={() => setSelectedDivision(d)}
+                          style={{
+                            paddingHorizontal: 14,
+                            paddingVertical: 10,
+                            borderRadius: 8,
+                            borderWidth: 1,
+                            borderColor:
+                              selectedDivision === d ? "#F97316" : "#D1D5DB",
+                            backgroundColor:
+                              selectedDivision === d ? "#FFF7ED" : "#FFFFFF",
+                            minWidth: 64,
+                            alignItems: "center",
+                          }}
+                        >
+                          <Text
+                            style={{
+                              fontSize: 14,
+                              fontWeight: "600",
+                              color:
+                                selectedDivision === d ? "#F97316" : "#374151",
+                            }}
+                          >
+                            {d}
+                          </Text>
+                        </TouchableOpacity>
+                      ))}
+                    </View>
+                    <View style={{ flexDirection: "row", gap: 12 }}>
+                      <TouchableOpacity
+                        onPress={() => {
+                          setEditingDivision(false);
+                          setSelectedDivision(school.division || "");
+                        }}
+                        style={{
+                          flex: 1,
+                          borderWidth: 1,
+                          borderColor: "#D1D5DB",
+                          borderRadius: 8,
+                          padding: 12,
+                          alignItems: "center",
+                        }}
+                      >
+                        <Text style={{ color: "#6B7280", fontWeight: "600" }}>
+                          Cancel
+                        </Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        onPress={handleSaveDivision}
+                        disabled={saving || !selectedDivision}
+                        style={{
+                          flex: 1,
+                          backgroundColor:
+                            saving || !selectedDivision ? "#9CA3AF" : "#F97316",
+                          borderRadius: 8,
+                          padding: 12,
+                          alignItems: "center",
+                        }}
+                      >
+                        {saving ? (
+                          <ActivityIndicator size="small" color="#FFFFFF" />
+                        ) : (
+                          <Text
+                            style={{
+                              color: "#FFFFFF",
+                              fontWeight: "600",
+                            }}
+                          >
+                            Save
+                          </Text>
+                        )}
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                ) : (
+                  <Text
+                    style={{ fontSize: 16, color: "#1B2A4A", marginTop: 4 }}
+                  >
+                    {school.division || "Not set"}
+                  </Text>
+                )}
+              </View>
+            </View>
+          ) : (
+            <View
+              style={{
+                backgroundColor: "#FFFFFF",
+                borderRadius: 12,
+                padding: 20,
+                alignItems: "center",
+                marginBottom: 24,
+              }}
+            >
+              <Text style={{ color: "#6B7280", fontSize: 14 }}>
+                No school linked to your account.
+              </Text>
+            </View>
+          )}
+
+          {/* Sports Section */}
+          <Text
+            style={{
+              fontSize: 20,
+              fontWeight: "700",
+              color: "#1B2A4A",
+              marginBottom: 16,
+            }}
+          >
+            My Sports
+          </Text>
+
+          {coachSchools.length === 0 ? (
+            <View
+              style={{
+                backgroundColor: "#FFFFFF",
+                borderRadius: 12,
+                padding: 20,
+                alignItems: "center",
+                marginBottom: 12,
+              }}
+            >
+              <Text style={{ color: "#6B7280", fontSize: 14 }}>
+                No sports added yet.
+              </Text>
+            </View>
+          ) : (
+            coachSchools.map((cs) => (
+              <View
+                key={cs.id}
+                style={{
+                  backgroundColor: "#FFFFFF",
+                  borderRadius: 12,
+                  padding: 16,
+                  marginBottom: 12,
+                }}
+              >
+                <View
+                  style={{
+                    flexDirection: "row",
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                  }}
+                >
+                  <View style={{ flex: 1 }}>
+                    <Text
+                      style={{
+                        fontSize: 16,
+                        fontWeight: "600",
+                        color: "#1B2A4A",
+                      }}
+                    >
+                      {cs.sport.charAt(0).toUpperCase() + cs.sport.slice(1)}
+                    </Text>
+                    {cs.is_primary && (
+                      <Text
+                        style={{
+                          fontSize: 12,
+                          color: "#F97316",
+                          fontWeight: "600",
+                          marginTop: 2,
+                        }}
+                      >
+                        Primary
+                      </Text>
+                    )}
+                  </View>
+                  <View style={{ flexDirection: "row", gap: 8 }}>
+                    {/* Switch sport button */}
+                    {SPORTS.filter((s) => s !== cs.sport).map((s) => (
+                      <TouchableOpacity
+                        key={s}
+                        onPress={() => handleChangeSport(cs.id, s)}
+                        style={{
+                          backgroundColor: "#EFF6FF",
+                          paddingHorizontal: 12,
+                          paddingVertical: 6,
+                          borderRadius: 6,
+                        }}
+                      >
+                        <Text
+                          style={{
+                            color: "#3B82F6",
+                            fontSize: 12,
+                            fontWeight: "600",
+                          }}
+                        >
+                          Switch to {s.charAt(0).toUpperCase() + s.slice(1)}
+                        </Text>
+                      </TouchableOpacity>
+                    ))}
+                    {coachSchools.length > 1 && (
+                      <TouchableOpacity
+                        onPress={() => handleRemoveSport(cs.id)}
+                        style={{
+                          backgroundColor: "#FEE2E2",
+                          paddingHorizontal: 12,
+                          paddingVertical: 6,
+                          borderRadius: 6,
+                        }}
+                      >
+                        <Text
+                          style={{
+                            color: "#DC2626",
+                            fontSize: 12,
+                            fontWeight: "600",
+                          }}
+                        >
+                          Remove
+                        </Text>
+                      </TouchableOpacity>
+                    )}
+                  </View>
+                </View>
+              </View>
+            ))
+          )}
+
+          {/* Add Sport */}
+          {!showAddSport ? (
+            <TouchableOpacity
+              onPress={() => setShowAddSport(true)}
+              style={{
+                backgroundColor: "#1B2A4A",
+                borderRadius: 8,
+                padding: 14,
+                alignItems: "center",
+                marginBottom: 32,
+              }}
+            >
+              <Text
+                style={{ color: "#FFFFFF", fontSize: 15, fontWeight: "700" }}
+              >
+                Add Another Sport
+              </Text>
+            </TouchableOpacity>
+          ) : (
+            <View
               style={{
                 backgroundColor: "#FFFFFF",
                 borderRadius: 12,
                 padding: 16,
-                marginBottom: 12,
-                flexDirection: "row",
-                justifyContent: "space-between",
-                alignItems: "center",
+                marginBottom: 32,
               }}
             >
-              <View style={{ flex: 1 }}>
-                <Text
-                  style={{ fontSize: 16, fontWeight: "600", color: "#1B2A4A" }}
-                >
-                  {(cs as any).schools?.name || "Unknown School"}
-                </Text>
-                <Text style={{ fontSize: 14, color: "#6B7280", marginTop: 2 }}>
-                  {cs.sport.charAt(0).toUpperCase() + cs.sport.slice(1)}
-                  {cs.is_primary && " (Primary)"}
-                </Text>
-              </View>
-              <TouchableOpacity
-                onPress={() => handleRemoveSchool(cs.id)}
-                style={{
-                  backgroundColor: "#FEE2E2",
-                  paddingHorizontal: 12,
-                  paddingVertical: 6,
-                  borderRadius: 6,
-                }}
-              >
-                <Text
-                  style={{ color: "#DC2626", fontSize: 12, fontWeight: "600" }}
-                >
-                  Remove
-                </Text>
-              </TouchableOpacity>
-            </View>
-          ))
-        )}
-
-        {/* Add School Button */}
-        <TouchableOpacity
-          onPress={() => setShowAddForm(!showAddForm)}
-          style={{
-            backgroundColor: "#F97316",
-            borderRadius: 8,
-            padding: 16,
-            alignItems: "center",
-            marginBottom: 24,
-          }}
-        >
-          <Text style={{ color: "#FFFFFF", fontSize: 16, fontWeight: "700" }}>
-            Add School
-          </Text>
-        </TouchableOpacity>
-
-        {/* Add School Form */}
-        {showAddForm && (
-          <View
-            style={{
-              backgroundColor: "#FFFFFF",
-              borderRadius: 12,
-              padding: 16,
-            }}
-          >
-            <Text
-              style={{
-                fontSize: 18,
-                fontWeight: "700",
-                color: "#1B2A4A",
-                marginBottom: 16,
-              }}
-            >
-              Add New School
-            </Text>
-
-            {/* School Search */}
-            <View style={{ marginBottom: 16 }}>
               <Text
                 style={{
                   fontSize: 16,
                   fontWeight: "600",
                   color: "#1B2A4A",
-                  marginBottom: 8,
+                  marginBottom: 12,
                 }}
               >
-                Search School
+                Select Sport
               </Text>
-              <TextInput
+              <View
                 style={{
-                  borderWidth: 1,
-                  borderColor: "#D1D5DB",
-                  borderRadius: 8,
-                  padding: 12,
-                  fontSize: 16,
-                  backgroundColor: "#FFFFFF",
-                }}
-                value={searchQuery}
-                onChangeText={setSearchQuery}
-                placeholder="Type to search schools..."
-                placeholderTextColor="#9CA3AF"
-              />
-            </View>
-
-            {/* School Selection */}
-            {schools.length > 0 && (
-              <View style={{ marginBottom: 16 }}>
-                <Text
-                  style={{
-                    fontSize: 16,
-                    fontWeight: "600",
-                    color: "#1B2A4A",
-                    marginBottom: 8,
-                  }}
-                >
-                  Select School
-                </Text>
-                <ScrollView style={{ maxHeight: 120 }}>
-                  {schools.map((school) => (
-                    <TouchableOpacity
-                      key={school.id}
-                      onPress={() =>
-                        setFormData({ ...formData, school_id: school.id })
-                      }
-                      style={{
-                        padding: 12,
-                        backgroundColor:
-                          formData.school_id === school.id
-                            ? "#F3F4F6"
-                            : "#FFFFFF",
-                        borderRadius: 8,
-                        marginBottom: 4,
-                        borderWidth: 1,
-                        borderColor:
-                          formData.school_id === school.id
-                            ? "#F97316"
-                            : "#E5E7EB",
-                      }}
-                    >
-                      <Text style={{ fontSize: 14, color: "#1B2A4A" }}>
-                        {school.name}
-                      </Text>
-                      {school.city && school.state && (
-                        <Text
-                          style={{
-                            fontSize: 12,
-                            color: "#6B7280",
-                            marginTop: 2,
-                          }}
-                        >
-                          {school.city}, {school.state}
-                        </Text>
-                      )}
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
-              </View>
-            )}
-
-            {/* Sport Selection */}
-            <View style={{ marginBottom: 16 }}>
-              <Text
-                style={{
-                  fontSize: 16,
-                  fontWeight: "600",
-                  color: "#1B2A4A",
-                  marginBottom: 8,
+                  flexDirection: "row",
+                  gap: 10,
+                  marginBottom: 16,
                 }}
               >
-                Sport
-              </Text>
-              <ScrollView horizontal style={{ maxHeight: 50 }}>
-                {SPORTS.map((sport) => (
+                {SPORTS.map((s) => (
                   <TouchableOpacity
-                    key={sport}
-                    onPress={() => setFormData({ ...formData, sport })}
+                    key={s}
+                    onPress={() => setNewSport(s)}
                     style={{
-                      paddingHorizontal: 16,
-                      paddingVertical: 8,
-                      backgroundColor:
-                        formData.sport === sport ? "#F97316" : "#F3F4F6",
-                      borderRadius: 20,
-                      marginRight: 8,
+                      flex: 1,
+                      paddingVertical: 12,
+                      borderRadius: 8,
+                      borderWidth: 1,
+                      borderColor: newSport === s ? "#F97316" : "#D1D5DB",
+                      backgroundColor: newSport === s ? "#FFF7ED" : "#FFFFFF",
+                      alignItems: "center",
                     }}
                   >
                     <Text
                       style={{
-                        fontSize: 14,
+                        fontSize: 15,
                         fontWeight: "600",
-                        color: formData.sport === sport ? "#FFFFFF" : "#374151",
+                        color: newSport === s ? "#F97316" : "#374151",
                       }}
                     >
-                      {sport.charAt(0).toUpperCase() + sport.slice(1)}
+                      {s.charAt(0).toUpperCase() + s.slice(1)}
                     </Text>
                   </TouchableOpacity>
                 ))}
-              </ScrollView>
+              </View>
+              <View style={{ flexDirection: "row", gap: 12 }}>
+                <TouchableOpacity
+                  onPress={() => {
+                    setShowAddSport(false);
+                    setNewSport("");
+                  }}
+                  style={{
+                    flex: 1,
+                    borderWidth: 1,
+                    borderColor: "#D1D5DB",
+                    borderRadius: 8,
+                    padding: 12,
+                    alignItems: "center",
+                  }}
+                >
+                  <Text style={{ color: "#6B7280", fontWeight: "600" }}>
+                    Cancel
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={handleAddSport}
+                  disabled={saving || !newSport}
+                  style={{
+                    flex: 1,
+                    backgroundColor:
+                      saving || !newSport ? "#9CA3AF" : "#F97316",
+                    borderRadius: 8,
+                    padding: 12,
+                    alignItems: "center",
+                  }}
+                >
+                  {saving ? (
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                  ) : (
+                    <Text style={{ color: "#FFFFFF", fontWeight: "600" }}>
+                      Add Sport
+                    </Text>
+                  )}
+                </TouchableOpacity>
+              </View>
             </View>
+          )}
 
-            {/* Primary School Toggle */}
+          {/* School Change Request Section */}
+          <Text
+            style={{
+              fontSize: 20,
+              fontWeight: "700",
+              color: "#1B2A4A",
+              marginBottom: 16,
+            }}
+          >
+            Request School Change
+          </Text>
+
+          {/* Pending Requests */}
+          {pendingRequests.filter((r) => r.status === "pending").length > 0 && (
             <View
               style={{
-                flexDirection: "row",
-                justifyContent: "space-between",
-                alignItems: "center",
-                marginBottom: 20,
+                backgroundColor: "#FEF3C7",
+                borderRadius: 12,
+                padding: 16,
+                marginBottom: 16,
               }}
             >
               <Text
-                style={{ fontSize: 16, fontWeight: "600", color: "#1B2A4A" }}
-              >
-                Primary School
-              </Text>
-              <Switch
-                value={formData.is_primary}
-                onValueChange={(value) =>
-                  setFormData({ ...formData, is_primary: value })
-                }
-              />
-            </View>
-
-            {/* Action Buttons */}
-            <View style={{ flexDirection: "row", gap: 12 }}>
-              <TouchableOpacity
-                onPress={() => {
-                  setShowAddForm(false);
-                  setFormData({ school_id: "", sport: "", is_primary: false });
-                  setSearchQuery("");
-                }}
                 style={{
-                  flex: 1,
+                  fontSize: 14,
+                  fontWeight: "600",
+                  color: "#92400E",
+                  marginBottom: 4,
+                }}
+              >
+                Pending Request
+              </Text>
+              <Text style={{ fontSize: 13, color: "#92400E" }}>
+                You have a school change request awaiting admin review.
+              </Text>
+            </View>
+          )}
+
+          {/* Past Requests */}
+          {pendingRequests
+            .filter((r) => r.status !== "pending")
+            .slice(0, 3)
+            .map((r) => (
+              <View
+                key={r.id}
+                style={{
+                  backgroundColor: "#FFFFFF",
+                  borderRadius: 12,
+                  padding: 16,
+                  marginBottom: 8,
+                }}
+              >
+                <View
+                  style={{
+                    flexDirection: "row",
+                    justifyContent: "space-between",
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontSize: 13,
+                      color: "#6B7280",
+                    }}
+                  >
+                    {new Date(r.created_at).toLocaleDateString()}
+                  </Text>
+                  <View
+                    style={{
+                      backgroundColor:
+                        r.status === "approved" ? "#F0FDF4" : "#FEE2E2",
+                      paddingHorizontal: 8,
+                      paddingVertical: 2,
+                      borderRadius: 8,
+                    }}
+                  >
+                    <Text
+                      style={{
+                        fontSize: 11,
+                        fontWeight: "600",
+                        color: r.status === "approved" ? "#10B981" : "#EF4444",
+                      }}
+                    >
+                      {r.status.charAt(0).toUpperCase() + r.status.slice(1)}
+                    </Text>
+                  </View>
+                </View>
+              </View>
+            ))}
+
+          {!showChangeRequest ? (
+            <TouchableOpacity
+              onPress={() => setShowChangeRequest(true)}
+              disabled={
+                pendingRequests.filter((r) => r.status === "pending").length > 0
+              }
+              style={{
+                backgroundColor:
+                  pendingRequests.filter((r) => r.status === "pending").length >
+                  0
+                    ? "#9CA3AF"
+                    : "#1B2A4A",
+                borderRadius: 8,
+                padding: 14,
+                alignItems: "center",
+                marginBottom: 16,
+              }}
+            >
+              <Text
+                style={{ color: "#FFFFFF", fontSize: 15, fontWeight: "700" }}
+              >
+                Request School Transfer
+              </Text>
+            </TouchableOpacity>
+          ) : (
+            <View
+              style={{
+                backgroundColor: "#FFFFFF",
+                borderRadius: 12,
+                padding: 16,
+                marginBottom: 16,
+              }}
+            >
+              <Text
+                style={{
+                  fontSize: 16,
+                  fontWeight: "600",
+                  color: "#1B2A4A",
+                  marginBottom: 12,
+                }}
+              >
+                Transfer to a Different School
+              </Text>
+
+              <SchoolSearch
+                onSelect={setChangeSchool}
+                selectedSchool={changeSchool}
+              />
+
+              <Text
+                style={{
+                  fontSize: 14,
+                  fontWeight: "600",
+                  color: "#374151",
+                  marginBottom: 6,
+                  marginTop: 16,
+                }}
+              >
+                Reason (optional)
+              </Text>
+              <TextInput
+                style={{
+                  backgroundColor: "#FFFFFF",
                   borderWidth: 1,
                   borderColor: "#D1D5DB",
                   borderRadius: 8,
-                  padding: 12,
-                  alignItems: "center",
+                  padding: 14,
+                  fontSize: 16,
+                  marginBottom: 16,
+                  minHeight: 80,
+                  textAlignVertical: "top",
                 }}
-              >
-                <Text style={{ color: "#6B7280", fontWeight: "600" }}>
-                  Cancel
-                </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={handleAddSchool}
-                disabled={loading || !formData.school_id || !formData.sport}
-                style={{
-                  flex: 1,
-                  backgroundColor:
-                    loading || !formData.school_id || !formData.sport
-                      ? "#9CA3AF"
-                      : "#F97316",
-                  borderRadius: 8,
-                  padding: 12,
-                  alignItems: "center",
-                }}
-              >
-                {loading ? (
-                  <ActivityIndicator size="small" color="#FFFFFF" />
-                ) : (
-                  <Text style={{ color: "#FFFFFF", fontWeight: "600" }}>
-                    Add School
+                value={changeReason}
+                onChangeText={setChangeReason}
+                placeholder="Why are you requesting a transfer?"
+                placeholderTextColor="#9CA3AF"
+                multiline
+              />
+
+              <View style={{ flexDirection: "row", gap: 12 }}>
+                <TouchableOpacity
+                  onPress={() => {
+                    setShowChangeRequest(false);
+                    setChangeSchool(null);
+                    setChangeReason("");
+                  }}
+                  style={{
+                    flex: 1,
+                    borderWidth: 1,
+                    borderColor: "#D1D5DB",
+                    borderRadius: 8,
+                    padding: 12,
+                    alignItems: "center",
+                  }}
+                >
+                  <Text style={{ color: "#6B7280", fontWeight: "600" }}>
+                    Cancel
                   </Text>
-                )}
-              </TouchableOpacity>
+                </TouchableOpacity>
+                <TouchableOpacity
+                  onPress={handleSubmitChangeRequest}
+                  disabled={saving || !changeSchool}
+                  style={{
+                    flex: 1,
+                    backgroundColor:
+                      saving || !changeSchool ? "#9CA3AF" : "#F97316",
+                    borderRadius: 8,
+                    padding: 12,
+                    alignItems: "center",
+                  }}
+                >
+                  {saving ? (
+                    <ActivityIndicator size="small" color="#FFFFFF" />
+                  ) : (
+                    <Text style={{ color: "#FFFFFF", fontWeight: "600" }}>
+                      Submit Request
+                    </Text>
+                  )}
+                </TouchableOpacity>
+              </View>
             </View>
-          </View>
-        )}
-      </View>
-    </ScrollView>
+          )}
+        </View>
+      </ScrollView>
+    </>
   );
 }

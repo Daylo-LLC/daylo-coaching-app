@@ -12,9 +12,12 @@ import {
   ScrollView,
   Platform,
 } from "react-native";
-import { useAuthStore } from "../../../src/store/auth";
-import { supabase } from "../../../src/lib/supabase";
-import { Tables } from "../../../src/types/database";
+import DateTimePicker, {
+  DateTimePickerEvent,
+} from "@react-native-community/datetimepicker";
+import { useAuthStore } from "../../src/store/auth";
+import { supabase } from "../../src/lib/supabase";
+import { Tables } from "../../src/types/database";
 
 type Availability = Tables<"availability">;
 
@@ -27,6 +30,7 @@ export default function AvailabilityScreen() {
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [modalVisible, setModalVisible] = useState(false);
+  const [editingId, setEditingId] = useState<string | null>(null);
 
   // Form state
   const [formSport, setFormSport] = useState<string>("football");
@@ -46,6 +50,15 @@ export default function AvailabilityScreen() {
     }>
   >([]);
   const [submitting, setSubmitting] = useState(false);
+
+  // Picker state
+  const [pickerMode, setPickerMode] = useState<
+    "date" | "startTime" | "endTime"
+  >("date");
+  const [tempDate, setTempDate] = useState(new Date());
+  const [tempStartTime, setTempStartTime] = useState(new Date());
+  const [tempEndTime, setTempEndTime] = useState(new Date());
+  const [showInlinePicker, setShowInlinePicker] = useState(false);
 
   const fetchSlots = useCallback(async () => {
     if (!profile) return;
@@ -98,32 +111,29 @@ export default function AvailabilityScreen() {
     );
   };
 
-  const handleCreate = async () => {
-    if (
-      !profile ||
-      !formSchoolId ||
-      !formDate ||
-      !formTimeStart ||
-      !formTimeEnd
-    ) {
+  const handleSubmit = async () => {
+    if (!profile || !formSchoolId || !formDate || !formTimeStart) {
       Alert.alert(
         "Error",
-        "Please fill in all required fields (school, date, start time, end time).",
+        "Please fill in all required fields (school, date, start time).",
       );
       return;
     }
     setSubmitting(true);
-    const { error } = await supabase.from("availability").insert({
+    const data: any = {
       coach_id: profile.id,
       school_id: formSchoolId,
       sport: formSport,
       date: formDate,
-      time_start: formTimeStart,
-      time_end: formTimeEnd,
+      time_start: convertTo24Hour(formTimeStart),
       home_away_preference: formPreference,
       venue: formVenue || null,
       max_travel_distance_miles: formDistance ? parseInt(formDistance) : null,
-    });
+      time_end: formTimeEnd ? convertTo24Hour(formTimeEnd) : null,
+    };
+    const { error } = editingId
+      ? await supabase.from("availability").update(data).eq("id", editingId)
+      : await supabase.from("availability").insert(data);
     setSubmitting(false);
     if (error) {
       Alert.alert("Error", error.message);
@@ -134,12 +144,126 @@ export default function AvailabilityScreen() {
     }
   };
 
+  const openCreateModal = () => {
+    resetForm();
+    setEditingId(null);
+    setModalVisible(true);
+  };
+
+  const openEditModal = (slot: Availability) => {
+    setEditingId(slot.id);
+    setFormSport(slot.sport);
+    setFormSchoolId(slot.school_id);
+    setFormDate(slot.date);
+    setFormTimeStart(convertTo12Hour(slot.time_start));
+    setFormTimeEnd(slot.time_end ? convertTo12Hour(slot.time_end) : "");
+    setFormPreference(slot.home_away_preference);
+    setFormVenue(slot.venue || "");
+    setFormDistance(
+      slot.max_travel_distance_miles
+        ? String(slot.max_travel_distance_miles)
+        : "",
+    );
+    // sync temp date/time pickers
+    const [y, m, d] = slot.date.split("-").map(Number);
+    setTempDate(new Date(y, m - 1, d));
+    const [sh, sm] = slot.time_start.split(":").map(Number);
+    const startDt = new Date();
+    startDt.setHours(sh, sm, 0, 0);
+    setTempStartTime(startDt);
+    if (slot.time_end) {
+      const [eh, em] = slot.time_end.split(":").map(Number);
+      const endDt = new Date();
+      endDt.setHours(eh, em, 0, 0);
+      setTempEndTime(endDt);
+    }
+    setModalVisible(true);
+  };
+
   const resetForm = () => {
+    setFormSport("football");
+    setFormSchoolId("");
     setFormDate("");
     setFormTimeStart("");
     setFormTimeEnd("");
+    setFormPreference("home");
     setFormVenue("");
     setFormDistance("");
+    setEditingId(null);
+  };
+
+  const convertTo24Hour = (time12h: string): string => {
+    const [time, modifier] = time12h.split(" ");
+    let [hours, minutes] = time.split(":").map(Number);
+
+    if (modifier === "PM" && hours !== 12) {
+      hours += 12;
+    } else if (modifier === "AM" && hours === 12) {
+      hours = 0;
+    }
+
+    return `${String(hours).padStart(2, "0")}:${String(minutes).padStart(2, "0")}`;
+  };
+
+  const convertTo12Hour = (time24h: string): string => {
+    const [hours, minutes] = time24h.split(":").map(Number);
+    const modifier = hours >= 12 ? "PM" : "AM";
+    const displayHours = hours % 12 || 12;
+    return `${displayHours}:${String(minutes).padStart(2, "0")} ${modifier}`;
+  };
+
+  const handleDateChange = (
+    event: DateTimePickerEvent,
+    selectedDate?: Date,
+  ) => {
+    if (selectedDate) {
+      const year = selectedDate.getFullYear();
+      const month = String(selectedDate.getMonth() + 1).padStart(2, "0");
+      const day = String(selectedDate.getDate()).padStart(2, "0");
+      setFormDate(`${year}-${month}-${day}`);
+      setTempDate(selectedDate);
+    }
+    if (Platform.OS === "android") {
+      setShowInlinePicker(false);
+    }
+  };
+
+  const handleStartTimeChange = (
+    event: DateTimePickerEvent,
+    selectedTime?: Date,
+  ) => {
+    if (selectedTime) {
+      let hours = selectedTime.getHours();
+      const minutes = String(selectedTime.getMinutes()).padStart(2, "0");
+      const ampm = hours >= 12 ? "PM" : "AM";
+      hours = hours % 12;
+      hours = hours ? hours : 12; // Convert 0 to 12
+      const formattedTime = `${hours}:${minutes} ${ampm}`;
+      setFormTimeStart(formattedTime);
+      setTempStartTime(selectedTime);
+    }
+    if (Platform.OS === "android") {
+      setShowInlinePicker(false);
+    }
+  };
+
+  const handleEndTimeChange = (
+    event: DateTimePickerEvent,
+    selectedTime?: Date,
+  ) => {
+    if (selectedTime) {
+      let hours = selectedTime.getHours();
+      const minutes = String(selectedTime.getMinutes()).padStart(2, "0");
+      const ampm = hours >= 12 ? "PM" : "AM";
+      hours = hours % 12;
+      hours = hours ? hours : 12; // Convert 0 to 12
+      const formattedTime = `${hours}:${minutes} ${ampm}`;
+      setFormTimeEnd(formattedTime);
+      setTempEndTime(selectedTime);
+    }
+    if (Platform.OS === "android") {
+      setShowInlinePicker(false);
+    }
   };
 
   if (loading) {
@@ -162,11 +286,6 @@ export default function AvailabilityScreen() {
             onRefresh={onRefresh}
             tintColor="#1B2A4A"
           />
-        }
-        ListHeaderComponent={
-          <Text style={{ fontSize: 14, color: "#6B7280", marginBottom: 12 }}>
-            {slots.length} upcoming slot{slots.length !== 1 ? "s" : ""}
-          </Text>
         }
         ListEmptyComponent={
           <View style={{ alignItems: "center", marginTop: 48 }}>
@@ -198,10 +317,11 @@ export default function AvailabilityScreen() {
                 <Text
                   style={{ fontSize: 16, fontWeight: "700", color: "#1B2A4A" }}
                 >
-                  {item.date}
+                  Date: {item.date}
                 </Text>
                 <Text style={{ fontSize: 13, color: "#6B7280", marginTop: 4 }}>
-                  {item.time_start} – {item.time_end}
+                  Time: {convertTo12Hour(item.time_start)} –{" "}
+                  {convertTo12Hour(item.time_end)}
                 </Text>
               </View>
               <View
@@ -236,6 +356,7 @@ export default function AvailabilityScreen() {
                 <Text
                   style={{ fontSize: 11, color: "#3B82F6", fontWeight: "600" }}
                 >
+                  Sport:{" "}
                   {item.sport.charAt(0).toUpperCase() + item.sport.slice(1)}
                 </Text>
               </View>
@@ -250,6 +371,7 @@ export default function AvailabilityScreen() {
                 <Text
                   style={{ fontSize: 11, color: "#F97316", fontWeight: "600" }}
                 >
+                  Location:{" "}
                   {item.home_away_preference.charAt(0).toUpperCase() +
                     item.home_away_preference.slice(1)}
                 </Text>
@@ -276,16 +398,37 @@ export default function AvailabilityScreen() {
               )}
             </View>
             {!item.is_booked && (
-              <TouchableOpacity
-                onPress={() => handleDelete(item.id)}
-                style={{ marginTop: 12 }}
+              <View
+                style={{
+                  flexDirection: "row",
+                  gap: 16,
+                  marginTop: 12,
+                  justifyContent: "flex-end",
+                }}
               >
-                <Text
-                  style={{ color: "#EF4444", fontWeight: "600", fontSize: 13 }}
-                >
-                  Delete Slot
-                </Text>
-              </TouchableOpacity>
+                <TouchableOpacity onPress={() => openEditModal(item)}>
+                  <Text
+                    style={{
+                      color: "#1B2A4A",
+                      fontWeight: "600",
+                      fontSize: 13,
+                    }}
+                  >
+                    Edit
+                  </Text>
+                </TouchableOpacity>
+                <TouchableOpacity onPress={() => handleDelete(item.id)}>
+                  <Text
+                    style={{
+                      color: "#EF4444",
+                      fontWeight: "600",
+                      fontSize: 13,
+                    }}
+                  >
+                    Delete
+                  </Text>
+                </TouchableOpacity>
+              </View>
             )}
           </View>
         )}
@@ -293,7 +436,7 @@ export default function AvailabilityScreen() {
 
       {/* FAB */}
       <TouchableOpacity
-        onPress={() => setModalVisible(true)}
+        onPress={openCreateModal}
         style={{
           position: "absolute",
           bottom: 24,
@@ -331,9 +474,14 @@ export default function AvailabilityScreen() {
             }}
           >
             <Text style={{ fontSize: 20, fontWeight: "700", color: "#1B2A4A" }}>
-              New Availability Slot
+              {editingId ? "Edit Availability Slot" : "New Availability Slot"}
             </Text>
-            <TouchableOpacity onPress={() => setModalVisible(false)}>
+            <TouchableOpacity
+              onPress={() => {
+                setModalVisible(false);
+                resetForm();
+              }}
+            >
               <Text style={{ color: "#6B7280", fontSize: 16 }}>Cancel</Text>
             </TouchableOpacity>
           </View>
@@ -433,23 +581,56 @@ export default function AvailabilityScreen() {
               marginBottom: 6,
             }}
           >
-            Date * (YYYY-MM-DD)
+            Date *
           </Text>
-          <TextInput
+          <TouchableOpacity
+            onPress={() => {
+              setPickerMode("date");
+              setShowInlinePicker(true);
+            }}
             style={{
               backgroundColor: "#FFFFFF",
               borderWidth: 1,
               borderColor: "#D1D5DB",
               borderRadius: 8,
               padding: 14,
-              fontSize: 16,
               marginBottom: 16,
             }}
-            placeholder="2025-09-12"
-            placeholderTextColor="#9CA3AF"
-            value={formDate}
-            onChangeText={setFormDate}
-          />
+          >
+            <Text
+              style={{ fontSize: 16, color: formDate ? "#000" : "#9CA3AF" }}
+            >
+              {formDate || "Select date"}
+            </Text>
+          </TouchableOpacity>
+          {showInlinePicker && pickerMode === "date" && (
+            <View style={{ marginBottom: 16 }}>
+              <DateTimePicker
+                value={tempDate}
+                mode="date"
+                display={Platform.OS === "ios" ? "spinner" : "default"}
+                onChange={handleDateChange}
+                minimumDate={new Date()}
+                style={{ width: "100%" }}
+              />
+              {Platform.OS === "ios" && (
+                <TouchableOpacity
+                  onPress={() => setShowInlinePicker(false)}
+                  style={{
+                    alignSelf: "flex-end",
+                    paddingHorizontal: 16,
+                    paddingVertical: 8,
+                    backgroundColor: "#1B2A4A",
+                    borderRadius: 8,
+                  }}
+                >
+                  <Text style={{ color: "#FFFFFF", fontWeight: "600" }}>
+                    Done
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
 
           <View style={{ flexDirection: "row", gap: 12 }}>
             <View style={{ flex: 1 }}>
@@ -461,23 +642,31 @@ export default function AvailabilityScreen() {
                   marginBottom: 6,
                 }}
               >
-                Start Time * (HH:MM)
+                Start Time *
               </Text>
-              <TextInput
+              <TouchableOpacity
+                onPress={() => {
+                  setPickerMode("startTime");
+                  setShowInlinePicker(true);
+                }}
                 style={{
                   backgroundColor: "#FFFFFF",
                   borderWidth: 1,
                   borderColor: "#D1D5DB",
                   borderRadius: 8,
                   padding: 14,
-                  fontSize: 16,
                   marginBottom: 16,
                 }}
-                placeholder="19:00"
-                placeholderTextColor="#9CA3AF"
-                value={formTimeStart}
-                onChangeText={setFormTimeStart}
-              />
+              >
+                <Text
+                  style={{
+                    fontSize: 16,
+                    color: formTimeStart ? "#000" : "#9CA3AF",
+                  }}
+                >
+                  {formTimeStart || "Select time"}
+                </Text>
+              </TouchableOpacity>
             </View>
             <View style={{ flex: 1 }}>
               <Text
@@ -488,25 +677,89 @@ export default function AvailabilityScreen() {
                   marginBottom: 6,
                 }}
               >
-                End Time * (HH:MM)
+                End Time (optional)
               </Text>
-              <TextInput
+              <TouchableOpacity
+                onPress={() => {
+                  setPickerMode("endTime");
+                  setShowInlinePicker(true);
+                }}
                 style={{
                   backgroundColor: "#FFFFFF",
                   borderWidth: 1,
                   borderColor: "#D1D5DB",
                   borderRadius: 8,
                   padding: 14,
-                  fontSize: 16,
                   marginBottom: 16,
                 }}
-                placeholder="21:00"
-                placeholderTextColor="#9CA3AF"
-                value={formTimeEnd}
-                onChangeText={setFormTimeEnd}
-              />
+              >
+                <Text
+                  style={{
+                    fontSize: 16,
+                    color: formTimeEnd ? "#000" : "#9CA3AF",
+                  }}
+                >
+                  {formTimeEnd || "Select time"}
+                </Text>
+              </TouchableOpacity>
             </View>
           </View>
+
+          {showInlinePicker && pickerMode === "startTime" && (
+            <View style={{ marginBottom: 16 }}>
+              <DateTimePicker
+                value={tempStartTime}
+                mode="time"
+                display={Platform.OS === "ios" ? "spinner" : "default"}
+                onChange={handleStartTimeChange}
+                style={{ width: "100%" }}
+              />
+              {Platform.OS === "ios" && (
+                <TouchableOpacity
+                  onPress={() => setShowInlinePicker(false)}
+                  style={{
+                    alignSelf: "flex-end",
+                    paddingHorizontal: 16,
+                    paddingVertical: 8,
+                    backgroundColor: "#1B2A4A",
+                    borderRadius: 8,
+                  }}
+                >
+                  <Text style={{ color: "#FFFFFF", fontWeight: "600" }}>
+                    Done
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
+
+          {showInlinePicker && pickerMode === "endTime" && (
+            <View style={{ marginBottom: 16 }}>
+              <DateTimePicker
+                value={tempEndTime}
+                mode="time"
+                display={Platform.OS === "ios" ? "spinner" : "default"}
+                onChange={handleEndTimeChange}
+                style={{ width: "100%" }}
+              />
+              {Platform.OS === "ios" && (
+                <TouchableOpacity
+                  onPress={() => setShowInlinePicker(false)}
+                  style={{
+                    alignSelf: "flex-end",
+                    paddingHorizontal: 16,
+                    paddingVertical: 8,
+                    backgroundColor: "#1B2A4A",
+                    borderRadius: 8,
+                  }}
+                >
+                  <Text style={{ color: "#FFFFFF", fontWeight: "600" }}>
+                    Done
+                  </Text>
+                </TouchableOpacity>
+              )}
+            </View>
+          )}
 
           <Text
             style={{
@@ -598,7 +851,7 @@ export default function AvailabilityScreen() {
           />
 
           <TouchableOpacity
-            onPress={handleCreate}
+            onPress={handleSubmit}
             disabled={submitting}
             style={{
               backgroundColor: "#F97316",
@@ -615,7 +868,7 @@ export default function AvailabilityScreen() {
               <Text
                 style={{ color: "#FFFFFF", fontSize: 16, fontWeight: "700" }}
               >
-                Create Slot
+                {editingId ? "Save Changes" : "Create Slot"}
               </Text>
             )}
           </TouchableOpacity>

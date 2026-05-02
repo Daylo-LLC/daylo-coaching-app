@@ -8,16 +8,30 @@ import {
   RefreshControl,
   Alert,
 } from "react-native";
+import { useRouter } from "expo-router";
 import { useAuthStore } from "../../../src/store/auth";
 import { supabase } from "../../../src/lib/supabase";
 import { Tables } from "../../../src/types/database";
 import { exportGameToCalendar } from "../../../src/lib/calendar";
+import moment from "moment";
 
-type Request = Tables<"requests">;
+type Request = Tables<"requests"> & {
+  requester_school?: {
+    name: string;
+    city: string | null;
+    state: string | null;
+  };
+  recipient_school?: {
+    name: string;
+    city: string | null;
+    state: string | null;
+  };
+};
 
 type Tab = "incoming" | "outgoing" | "confirmed";
 
 export default function RequestsScreen() {
+  const router = useRouter();
   const { profile } = useAuthStore();
   const [tab, setTab] = useState<Tab>("incoming");
   const [requests, setRequests] = useState<Request[]>([]);
@@ -43,8 +57,34 @@ export default function RequestsScreen() {
 
     q = q.order("created_at", { ascending: false });
 
-    const { data } = await q;
-    setRequests(data || []);
+    const { data: requestsData } = await q;
+
+    // Fetch schools for all unique school IDs in the requests
+    if (requestsData && requestsData.length > 0) {
+      const schoolIds = new Set<string>();
+      requestsData.forEach((r) => {
+        if (r.requester_school_id) schoolIds.add(r.requester_school_id);
+        if (r.recipient_school_id) schoolIds.add(r.recipient_school_id);
+      });
+
+      const { data: schoolsData } = await supabase
+        .from("schools")
+        .select("id, name, city, state")
+        .in("id", Array.from(schoolIds));
+
+      const schoolMap = new Map(schoolsData?.map((s) => [s.id, s]) || []);
+
+      const requestsWithSchools = requestsData.map((r) => ({
+        ...r,
+        requester_school: schoolMap.get(r.requester_school_id),
+        recipient_school: schoolMap.get(r.recipient_school_id),
+      }));
+
+      setRequests(requestsWithSchools);
+    } else {
+      setRequests([]);
+    }
+
     setLoading(false);
   }, [profile, tab]);
 
@@ -120,8 +160,14 @@ export default function RequestsScreen() {
     };
     const sc = statusColors[item.status] || statusColors.pending;
 
+    // Determine which school to show
+    const displaySchool = isIncoming
+      ? item.requester_school
+      : item.recipient_school;
+
     return (
-      <View
+      <TouchableOpacity
+        onPress={() => router.push(`/request/${item.id}`)}
         style={{
           backgroundColor: "#FFFFFF",
           borderRadius: 12,
@@ -151,8 +197,19 @@ export default function RequestsScreen() {
           </View>
         </View>
 
-        <Text style={{ fontSize: 14, color: "#374151", marginTop: 8 }}>
-          {item.date} • {item.time_start} – {item.time_end}
+        {displaySchool && (
+          <Text style={{ fontSize: 14, color: "#374151", marginTop: 8 }}>
+            {isIncoming ? "From" : "To"}: {displaySchool.name}
+            {displaySchool.city && displaySchool.state
+              ? ` (${displaySchool.city}, ${displaySchool.state})`
+              : ""}
+          </Text>
+        )}
+
+        <Text style={{ fontSize: 14, color: "#374151", marginTop: 4 }}>
+          {moment(item.date).format("MMMM D, YYYY")} •{" "}
+          {moment(item.time_start, "HH:mm:ss").format("h:mm A")} –{" "}
+          {moment(item.time_end, "HH:mm:ss").format("h:mm A")}
         </Text>
         <Text style={{ fontSize: 13, color: "#6B7280", marginTop: 4 }}>
           {item.home_away.charAt(0).toUpperCase() + item.home_away.slice(1)}
@@ -162,7 +219,10 @@ export default function RequestsScreen() {
         {tab === "incoming" && item.status === "pending" && (
           <View style={{ flexDirection: "row", gap: 12, marginTop: 12 }}>
             <TouchableOpacity
-              onPress={() => handleAction(item.id, "accepted")}
+              onPress={(e) => {
+                e.stopPropagation();
+                handleAction(item.id, "accepted");
+              }}
               style={{
                 flex: 1,
                 backgroundColor: "#10B981",
@@ -176,7 +236,10 @@ export default function RequestsScreen() {
               </Text>
             </TouchableOpacity>
             <TouchableOpacity
-              onPress={() => handleAction(item.id, "declined")}
+              onPress={(e) => {
+                e.stopPropagation();
+                handleAction(item.id, "declined");
+              }}
               style={{
                 flex: 1,
                 backgroundColor: "#EF4444",
@@ -194,7 +257,10 @@ export default function RequestsScreen() {
 
         {tab === "outgoing" && item.status === "pending" && (
           <TouchableOpacity
-            onPress={() => handleCancel(item.id)}
+            onPress={(e) => {
+              e.stopPropagation();
+              handleCancel(item.id);
+            }}
             style={{ marginTop: 12 }}
           >
             <Text style={{ color: "#EF4444", fontWeight: "600", fontSize: 13 }}>
@@ -205,7 +271,8 @@ export default function RequestsScreen() {
 
         {tab === "confirmed" && item.status === "accepted" && (
           <TouchableOpacity
-            onPress={() =>
+            onPress={(e) => {
+              e.stopPropagation();
               exportGameToCalendar({
                 title: `${item.sport} game`,
                 date: item.date,
@@ -213,8 +280,8 @@ export default function RequestsScreen() {
                 timeEnd: item.time_end,
                 venue: item.venue,
                 sport: item.sport,
-              })
-            }
+              });
+            }}
             style={{
               flexDirection: "row",
               alignItems: "center",
@@ -232,7 +299,7 @@ export default function RequestsScreen() {
             </Text>
           </TouchableOpacity>
         )}
-      </View>
+      </TouchableOpacity>
     );
   };
 

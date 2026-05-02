@@ -1,0 +1,877 @@
+{
+  "numberOfSchools": 482,
+  "numberOfPages": 49,
+  "schoolList": [
+    {
+      "schoolid": "130002603806",
+      "schoolName": "Aaron Cohn Regional Youth Detention Center",
+      "phone": "(706) 568-2498",
+      "url": "https://www.schooldigger.com/go/GA/schools/0002603806/school.aspx",
+      "urlCompare": "https://www.schooldigger.com/go/GA/schools/0002603806/search.aspx",
+      "address": {
+        "street": "7700-B Chattsworth Rd",
+        "city": "Midland",
+        "state": "GA",
+        "stateFull": "Georgia",
+        "zip": "31820",
+        "zip4": "",
+        "cityURL": "https://www.schooldigger.com/go/GA/city/Midland/search.aspx",
+        "zipURL": "https://www.schooldigger.com/go/GA/zip/31820/search.aspx",
+        "html": "7700-B Chattsworth Rd<br />Midland, GA 31820"
+      },
+      "lowGrade": "5",
+      "highGrade": "12",
+      "schoolLevel": "High",
+      "isCharterSchool": "No",
+      "isMagnetSchool": "No",
+      "isVirtualSchool": "No",
+      "isTitleISchool": "Yes",
+      "isTitleISchoolwideSchool": "No",
+      "hasBoundary": false,
+      "district": {
+        "districtID": "1300026",
+        "districtName": "Department of Juvenile Justice",
+        "url": "https://www.schooldigger.com/go/GA/district/00026/search.aspx",
+        "rankURL": "https://www.schooldigger.com/go/GA/districtrank.aspx"
+      },
+      "county": {
+        "countyName": "Muscogee County",
+        "countyURL": "https://www.schooldigger.com/go/GA/county/Muscogee+County/search.aspx"
+      },
+      "rankHistory": null,
+      "rankMovement": null,
+      "schoolYearlyDetails": [
+        {
+          "year": 2025,
+          "numberOfStudents": 19,
+          "percentFreeDiscLunch": 84.21,
+          "percentofAfricanAmericanStudents": 63.16,
+          "percentofAsianStudents": 0.0,
+          "percentofHispanicStudents": 0.0,
+          "percentofIndianStudents": 0.0,
+          "percentofPacificIslanderStudents": 0.0,
+          "percentofWhiteStudents": 36.84,
+          "percentofTwoOrMoreRaceStudents": 0.0,
+          "percentofUnspecifiedRaceStudents": null,
+          "teachersFulltime": 6.0,
+          "pupilTeacherRatio": 3.1,
+          "numberofAfricanAmericanStudents": 12,
+          "numberofAsianStudents": 0,
+          "numberofHispanicStudents": 0,
+          "numberofIndianStudents": 0,
+          "numberofPacificIslanderStudents": 0,
+          "numberofWhiteStudents": 7,
+          "numberofTwoOrMoreRaceStudents": 0,
+          "numberofUnspecifiedRaceStudents": null
+        }
+      ],
+      "isPrivate": false,
+      "privateDays": null,
+      "privateHours": null,
+      "privateHasLibrary": null,
+      "privateCoed": null,
+      "privateOrientation": null
+    },
+    {
+      "schoolid": "130438001528",
+      "schoolName": "Academy of Richmond County High School",
+      "phone": "(706) 737-7152",
+      "url": "https://www.schooldigger.com/go/GA/schools/0438001528/school.aspx",
+      "urlCompare": "https://www.schooldigger.com/go/GA/schools/0438001528/search.aspx",
+      "address": {
+        "street": "910 Russell St",
+        "city": "Augusta",
+        "state": "GA",
+        "stateFull": "Georgia",
+        "zip": "30904",
+        "zip4": "",
+        "cityURL": "https://www.schooldigger.com/go/GA/city/Augusta/search.aspx",
+        "zipURL": "https://www.schooldigger.com/go/GA/zip/30904/search.aspx",
+        "html": "910 Russell St<br />Augusta, GA 30904"
+      },
+      "lowGrade": "9",
+      "highGrade": "12",
+      "schoolLevel": "High",
+      "isCharterSchool": "No",
+      "isMagnetSchool": "No",
+      "isVirtualSchool": "No",
+      "isTitleISchool": "Yes",
+      "isTitleISchoolwideSchool": "No",
+      "hasBoundary": false,
+      "district": {
+        "districtID": "1304380",
+        "districtName": "Richmond County",
+        "url": "https://www.schooldigger.com/go/GA/district/04380/search.aspx",
+        "rankURL": "https://www.schooldigger.com/go/GA/districtrank.aspx"
+      },
+      "county": {
+        "countyName": "Richmond County",
+        "countyURL": "https://www.schooldigger.com/go/GA/county/Richmond+County/search.aspx"
+      },
+      "rankHistory": [
+        {
+          "year": 2025,
+          "rank": 380,
+          "rankOf": 452,
+          "rankStars": 1,
+          "rankLevel": "High",
+          "rankStatewidePercentage": 15.93,
+          "averageStandardScore": 16.19969
+        },
+        {
+          "year": 2024,
+          "rank": 393,
+          "rankOf": 458,
+          "rankStars": 1,
+          "rankLevel": "High",
+          "rankStatewidePercentage": 14.19,
+          "averageStandardScore": 15.66764
+        }
+      ],
+      "rankMovement": 13,
+      "schoolYearlyDetails": [
+        {
+          "year": 2025,
+          "numberOfStudents": 1178,
+          "percentFreeDiscLunch": 85.06,
+          "percentofAfricanAmericanStudents": 71.05,
+          "percentofAsianStudents": 0.59,
+          "percentofHispanicStudents": 7.39,
+          "percentofIndianStudents": 0.59,
+          "percentofPacificIslanderStudents": 1.70,
+          "percentofWhiteStudents": 14.43,
+          "percentofTwoOrMoreRaceStudents": 4.24,
+          "percentofUnspecifiedRaceStudents": null,
+          "teachersFulltime": 65.6,
+          "pupilTeacherRatio": 17.9,
+          "numberofAfricanAmericanStudents": 837,
+          "numberofAsianStudents": 7,
+          "numberofHispanicStudents": 87,
+          "numberofIndianStudents": 7,
+          "numberofPacificIslanderStudents": 20,
+          "numberofWhiteStudents": 170,
+          "numberofTwoOrMoreRaceStudents": 50,
+          "numberofUnspecifiedRaceStudents": null
+        }
+      ],
+      "isPrivate": false,
+      "privateDays": null,
+      "privateHours": null,
+      "privateHasLibrary": null,
+      "privateCoed": null,
+      "privateOrientation": null
+    },
+    {
+      "schoolid": "130033002352",
+      "schoolName": "Adairsville High School",
+      "phone": "(770) 606-4151",
+      "url": "https://www.schooldigger.com/go/GA/schools/0033002352/school.aspx",
+      "urlCompare": "https://www.schooldigger.com/go/GA/schools/0033002352/search.aspx",
+      "address": {
+        "street": "519 Old Highway 41 NW",
+        "city": "Adairsville",
+        "state": "GA",
+        "stateFull": "Georgia",
+        "zip": "30103",
+        "zip4": "",
+        "cityURL": "https://www.schooldigger.com/go/GA/city/Adairsville/search.aspx",
+        "zipURL": "https://www.schooldigger.com/go/GA/zip/30103/search.aspx",
+        "html": "519 Old Highway 41 NW<br />Adairsville, GA 30103"
+      },
+      "lowGrade": "9",
+      "highGrade": "12",
+      "schoolLevel": "High",
+      "isCharterSchool": "No",
+      "isMagnetSchool": "No",
+      "isVirtualSchool": "No",
+      "isTitleISchool": "No",
+      "isTitleISchoolwideSchool": "No",
+      "hasBoundary": false,
+      "district": {
+        "districtID": "1300330",
+        "districtName": "Bartow County",
+        "url": "https://www.schooldigger.com/go/GA/district/00330/search.aspx",
+        "rankURL": "https://www.schooldigger.com/go/GA/districtrank.aspx"
+      },
+      "county": {
+        "countyName": "Bartow County",
+        "countyURL": "https://www.schooldigger.com/go/GA/county/Bartow+County/search.aspx"
+      },
+      "rankHistory": [
+        {
+          "year": 2025,
+          "rank": 159,
+          "rankOf": 452,
+          "rankStars": 3,
+          "rankLevel": "High",
+          "rankStatewidePercentage": 64.82,
+          "averageStandardScore": 52.22968
+        },
+        {
+          "year": 2024,
+          "rank": 160,
+          "rankOf": 458,
+          "rankStars": 3,
+          "rankLevel": "High",
+          "rankStatewidePercentage": 65.07,
+          "averageStandardScore": 54.43468
+        }
+      ],
+      "rankMovement": 1,
+      "schoolYearlyDetails": [
+        {
+          "year": 2025,
+          "numberOfStudents": 1206,
+          "percentFreeDiscLunch": 48.76,
+          "percentofAfricanAmericanStudents": 6.30,
+          "percentofAsianStudents": 0.91,
+          "percentofHispanicStudents": 10.03,
+          "percentofIndianStudents": 0.08,
+          "percentofPacificIslanderStudents": 0.08,
+          "percentofWhiteStudents": 78.61,
+          "percentofTwoOrMoreRaceStudents": 3.98,
+          "percentofUnspecifiedRaceStudents": null,
+          "teachersFulltime": 71.9,
+          "pupilTeacherRatio": 16.7,
+          "numberofAfricanAmericanStudents": 76,
+          "numberofAsianStudents": 11,
+          "numberofHispanicStudents": 121,
+          "numberofIndianStudents": 1,
+          "numberofPacificIslanderStudents": 1,
+          "numberofWhiteStudents": 948,
+          "numberofTwoOrMoreRaceStudents": 48,
+          "numberofUnspecifiedRaceStudents": null
+        }
+      ],
+      "isPrivate": false,
+      "privateDays": null,
+      "privateHours": null,
+      "privateHasLibrary": null,
+      "privateCoed": null,
+      "privateOrientation": null
+    },
+    {
+      "schoolid": "130393003436",
+      "schoolName": "Alcovy High School",
+      "phone": "(770) 784-4995",
+      "url": "https://www.schooldigger.com/go/GA/schools/0393003436/school.aspx",
+      "urlCompare": "https://www.schooldigger.com/go/GA/schools/0393003436/search.aspx",
+      "address": {
+        "street": "14567 Highway 36",
+        "city": "Covington",
+        "state": "GA",
+        "stateFull": "Georgia",
+        "zip": "30014",
+        "zip4": "",
+        "cityURL": "https://www.schooldigger.com/go/GA/city/Covington/search.aspx",
+        "zipURL": "https://www.schooldigger.com/go/GA/zip/30014/search.aspx",
+        "html": "14567 Highway 36<br />Covington, GA 30014"
+      },
+      "lowGrade": "9",
+      "highGrade": "12",
+      "schoolLevel": "High",
+      "isCharterSchool": "No",
+      "isMagnetSchool": "No",
+      "isVirtualSchool": "No",
+      "isTitleISchool": "Yes",
+      "isTitleISchoolwideSchool": "No",
+      "hasBoundary": false,
+      "district": {
+        "districtID": "1303930",
+        "districtName": "Newton County",
+        "url": "https://www.schooldigger.com/go/GA/district/03930/search.aspx",
+        "rankURL": "https://www.schooldigger.com/go/GA/districtrank.aspx"
+      },
+      "county": {
+        "countyName": "Newton County",
+        "countyURL": "https://www.schooldigger.com/go/GA/county/Newton+County/search.aspx"
+      },
+      "rankHistory": [
+        {
+          "year": 2025,
+          "rank": 369,
+          "rankOf": 452,
+          "rankStars": 1,
+          "rankLevel": "High",
+          "rankStatewidePercentage": 18.36,
+          "averageStandardScore": 17.98610
+        },
+        {
+          "year": 2024,
+          "rank": 391,
+          "rankOf": 458,
+          "rankStars": 1,
+          "rankLevel": "High",
+          "rankStatewidePercentage": 14.63,
+          "averageStandardScore": 15.81288
+        }
+      ],
+      "rankMovement": 22,
+      "schoolYearlyDetails": [
+        {
+          "year": 2025,
+          "numberOfStudents": 1968,
+          "percentFreeDiscLunch": 92.84,
+          "percentofAfricanAmericanStudents": 65.90,
+          "percentofAsianStudents": 0.46,
+          "percentofHispanicStudents": 10.57,
+          "percentofIndianStudents": 0.10,
+          "percentofPacificIslanderStudents": 0.36,
+          "percentofWhiteStudents": 17.84,
+          "percentofTwoOrMoreRaceStudents": 4.78,
+          "percentofUnspecifiedRaceStudents": null,
+          "teachersFulltime": 99.8,
+          "pupilTeacherRatio": 19.7,
+          "numberofAfricanAmericanStudents": 1297,
+          "numberofAsianStudents": 9,
+          "numberofHispanicStudents": 208,
+          "numberofIndianStudents": 2,
+          "numberofPacificIslanderStudents": 7,
+          "numberofWhiteStudents": 351,
+          "numberofTwoOrMoreRaceStudents": 94,
+          "numberofUnspecifiedRaceStudents": null
+        }
+      ],
+      "isPrivate": false,
+      "privateDays": null,
+      "privateHours": null,
+      "privateHasLibrary": null,
+      "privateCoed": null,
+      "privateOrientation": null
+    },
+    {
+      "schoolid": "130186001976",
+      "schoolName": "Alexander High School",
+      "phone": "(770) 651-6000",
+      "url": "https://www.schooldigger.com/go/GA/schools/0186001976/school.aspx",
+      "urlCompare": "https://www.schooldigger.com/go/GA/schools/0186001976/search.aspx",
+      "address": {
+        "street": "6500 Alexander Pkwy",
+        "city": "Douglasville",
+        "state": "GA",
+        "stateFull": "Georgia",
+        "zip": "30135",
+        "zip4": "",
+        "cityURL": "https://www.schooldigger.com/go/GA/city/Douglasville/search.aspx",
+        "zipURL": "https://www.schooldigger.com/go/GA/zip/30135/search.aspx",
+        "html": "6500 Alexander Pkwy<br />Douglasville, GA 30135"
+      },
+      "lowGrade": "9",
+      "highGrade": "12",
+      "schoolLevel": "High",
+      "isCharterSchool": "No",
+      "isMagnetSchool": "No",
+      "isVirtualSchool": "No",
+      "isTitleISchool": "No",
+      "isTitleISchoolwideSchool": "No",
+      "hasBoundary": false,
+      "district": {
+        "districtID": "1301860",
+        "districtName": "Douglas County",
+        "url": "https://www.schooldigger.com/go/GA/district/01860/search.aspx",
+        "rankURL": "https://www.schooldigger.com/go/GA/districtrank.aspx"
+      },
+      "county": {
+        "countyName": "Douglas County",
+        "countyURL": "https://www.schooldigger.com/go/GA/county/Douglas+County/search.aspx"
+      },
+      "rankHistory": [
+        {
+          "year": 2025,
+          "rank": 195,
+          "rankOf": 452,
+          "rankStars": 3,
+          "rankLevel": "High",
+          "rankStatewidePercentage": 56.86,
+          "averageStandardScore": 45.57234
+        },
+        {
+          "year": 2024,
+          "rank": 222,
+          "rankOf": 458,
+          "rankStars": 3,
+          "rankLevel": "High",
+          "rankStatewidePercentage": 51.53,
+          "averageStandardScore": 43.14398
+        }
+      ],
+      "rankMovement": 27,
+      "schoolYearlyDetails": [
+        {
+          "year": 2025,
+          "numberOfStudents": 1830,
+          "percentFreeDiscLunch": 52.30,
+          "percentofAfricanAmericanStudents": 33.72,
+          "percentofAsianStudents": 1.48,
+          "percentofHispanicStudents": 18.63,
+          "percentofIndianStudents": 0.27,
+          "percentofPacificIslanderStudents": 0.11,
+          "percentofWhiteStudents": 39.13,
+          "percentofTwoOrMoreRaceStudents": 6.67,
+          "percentofUnspecifiedRaceStudents": null,
+          "teachersFulltime": 99.6,
+          "pupilTeacherRatio": 18.3,
+          "numberofAfricanAmericanStudents": 617,
+          "numberofAsianStudents": 27,
+          "numberofHispanicStudents": 341,
+          "numberofIndianStudents": 5,
+          "numberofPacificIslanderStudents": 2,
+          "numberofWhiteStudents": 716,
+          "numberofTwoOrMoreRaceStudents": 122,
+          "numberofUnspecifiedRaceStudents": null
+        }
+      ],
+      "isPrivate": false,
+      "privateDays": null,
+      "privateHours": null,
+      "privateHasLibrary": null,
+      "privateCoed": null,
+      "privateOrientation": null
+    },
+    {
+      "schoolid": "130129003781",
+      "schoolName": "Allatoona High School",
+      "phone": "(770) 975-6503",
+      "url": "https://www.schooldigger.com/go/GA/schools/0129003781/school.aspx",
+      "urlCompare": "https://www.schooldigger.com/go/GA/schools/0129003781/search.aspx",
+      "address": {
+        "street": "3300 Dallas Acworth Hwy NW",
+        "city": "Acworth",
+        "state": "GA",
+        "stateFull": "Georgia",
+        "zip": "30101",
+        "zip4": "",
+        "cityURL": "https://www.schooldigger.com/go/GA/city/Acworth/search.aspx",
+        "zipURL": "https://www.schooldigger.com/go/GA/zip/30101/search.aspx",
+        "html": "3300 Dallas Acworth Hwy NW<br />Acworth, GA 30101"
+      },
+      "lowGrade": "9",
+      "highGrade": "12",
+      "schoolLevel": "High",
+      "isCharterSchool": "No",
+      "isMagnetSchool": "No",
+      "isVirtualSchool": "No",
+      "isTitleISchool": "No",
+      "isTitleISchoolwideSchool": "No",
+      "hasBoundary": false,
+      "district": {
+        "districtID": "1301290",
+        "districtName": "Cobb County",
+        "url": "https://www.schooldigger.com/go/GA/district/01290/search.aspx",
+        "rankURL": "https://www.schooldigger.com/go/GA/districtrank.aspx"
+      },
+      "county": {
+        "countyName": "Cobb County",
+        "countyURL": "https://www.schooldigger.com/go/GA/county/Cobb+County/search.aspx"
+      },
+      "rankHistory": [
+        {
+          "year": 2025,
+          "rank": 51,
+          "rankOf": 452,
+          "rankStars": 4,
+          "rankLevel": "High",
+          "rankStatewidePercentage": 88.72,
+          "averageStandardScore": 78.73359
+        },
+        {
+          "year": 2024,
+          "rank": 39,
+          "rankOf": 458,
+          "rankStars": 5,
+          "rankLevel": "High",
+          "rankStatewidePercentage": 91.48,
+          "averageStandardScore": 83.76030
+        }
+      ],
+      "rankMovement": -12,
+      "schoolYearlyDetails": [
+        {
+          "year": 2025,
+          "numberOfStudents": 1560,
+          "percentFreeDiscLunch": 29.36,
+          "percentofAfricanAmericanStudents": 19.10,
+          "percentofAsianStudents": 3.53,
+          "percentofHispanicStudents": 15.13,
+          "percentofIndianStudents": 0.13,
+          "percentofPacificIslanderStudents": 0.19,
+          "percentofWhiteStudents": 56.47,
+          "percentofTwoOrMoreRaceStudents": 5.45,
+          "percentofUnspecifiedRaceStudents": null,
+          "teachersFulltime": 97.6,
+          "pupilTeacherRatio": 15.9,
+          "numberofAfricanAmericanStudents": 298,
+          "numberofAsianStudents": 55,
+          "numberofHispanicStudents": 236,
+          "numberofIndianStudents": 2,
+          "numberofPacificIslanderStudents": 3,
+          "numberofWhiteStudents": 881,
+          "numberofTwoOrMoreRaceStudents": 85,
+          "numberofUnspecifiedRaceStudents": null
+        }
+      ],
+      "isPrivate": false,
+      "privateDays": null,
+      "privateHours": null,
+      "privateHasLibrary": null,
+      "privateCoed": null,
+      "privateOrientation": null
+    },
+    {
+      "schoolid": "130222004320",
+      "schoolName": "Alliance Academy for Innovation",
+      "phone": "(470) 695-7823",
+      "url": "https://www.schooldigger.com/go/GA/schools/0222004320/school.aspx",
+      "urlCompare": "https://www.schooldigger.com/go/GA/schools/0222004320/search.aspx",
+      "address": {
+        "street": "1100 Lanier 400 Pkwy",
+        "city": "Cumming",
+        "state": "GA",
+        "stateFull": "Georgia",
+        "zip": "30040",
+        "zip4": "",
+        "cityURL": "https://www.schooldigger.com/go/GA/city/Cumming/search.aspx",
+        "zipURL": "https://www.schooldigger.com/go/GA/zip/30040/search.aspx",
+        "html": "1100 Lanier 400 Pkwy<br />Cumming, GA 30040"
+      },
+      "lowGrade": "9",
+      "highGrade": "12",
+      "schoolLevel": "High",
+      "isCharterSchool": "No",
+      "isMagnetSchool": "No",
+      "isVirtualSchool": "No",
+      "isTitleISchool": "No",
+      "isTitleISchoolwideSchool": "No",
+      "hasBoundary": false,
+      "district": {
+        "districtID": "1302220",
+        "districtName": "Forsyth County",
+        "url": "https://www.schooldigger.com/go/GA/district/02220/search.aspx",
+        "rankURL": "https://www.schooldigger.com/go/GA/districtrank.aspx"
+      },
+      "county": {
+        "countyName": "Forsyth County",
+        "countyURL": "https://www.schooldigger.com/go/GA/county/Forsyth+County/search.aspx"
+      },
+      "rankHistory": [
+        {
+          "year": 2025,
+          "rank": 2,
+          "rankOf": 452,
+          "rankStars": 5,
+          "rankLevel": "High",
+          "rankStatewidePercentage": 99.56,
+          "averageStandardScore": 97.25371
+        },
+        {
+          "year": 2024,
+          "rank": 2,
+          "rankOf": 458,
+          "rankStars": 5,
+          "rankLevel": "High",
+          "rankStatewidePercentage": 99.56,
+          "averageStandardScore": 97.40388
+        }
+      ],
+      "rankMovement": 0,
+      "schoolYearlyDetails": [
+        {
+          "year": 2025,
+          "numberOfStudents": 1145,
+          "percentFreeDiscLunch": 9.00,
+          "percentofAfricanAmericanStudents": 1.57,
+          "percentofAsianStudents": 61.66,
+          "percentofHispanicStudents": 6.55,
+          "percentofIndianStudents": 1.05,
+          "percentofPacificIslanderStudents": 0.09,
+          "percentofWhiteStudents": 27.60,
+          "percentofTwoOrMoreRaceStudents": 1.48,
+          "percentofUnspecifiedRaceStudents": null,
+          "teachersFulltime": 59.6,
+          "pupilTeacherRatio": 19.2,
+          "numberofAfricanAmericanStudents": 18,
+          "numberofAsianStudents": 706,
+          "numberofHispanicStudents": 75,
+          "numberofIndianStudents": 12,
+          "numberofPacificIslanderStudents": 1,
+          "numberofWhiteStudents": 316,
+          "numberofTwoOrMoreRaceStudents": 17,
+          "numberofUnspecifiedRaceStudents": null
+        }
+      ],
+      "isPrivate": false,
+      "privateDays": null,
+      "privateHours": null,
+      "privateHasLibrary": null,
+      "privateCoed": null,
+      "privateOrientation": null
+    },
+    {
+      "schoolid": "130228003364",
+      "schoolName": "Alpharetta High School",
+      "phone": "(470) 254-7640",
+      "url": "https://www.schooldigger.com/go/GA/schools/0228003364/school.aspx",
+      "urlCompare": "https://www.schooldigger.com/go/GA/schools/0228003364/search.aspx",
+      "address": {
+        "street": "3595 Webb Bridge Rd",
+        "city": "Alpharetta",
+        "state": "GA",
+        "stateFull": "Georgia",
+        "zip": "30005",
+        "zip4": "",
+        "cityURL": "https://www.schooldigger.com/go/GA/city/Alpharetta/search.aspx",
+        "zipURL": "https://www.schooldigger.com/go/GA/zip/30005/search.aspx",
+        "html": "3595 Webb Bridge Rd<br />Alpharetta, GA 30005"
+      },
+      "lowGrade": "9",
+      "highGrade": "12",
+      "schoolLevel": "High",
+      "isCharterSchool": "No",
+      "isMagnetSchool": "No",
+      "isVirtualSchool": "No",
+      "isTitleISchool": "No",
+      "isTitleISchoolwideSchool": "No",
+      "hasBoundary": false,
+      "district": {
+        "districtID": "1302280",
+        "districtName": "Fulton County",
+        "url": "https://www.schooldigger.com/go/GA/district/02280/search.aspx",
+        "rankURL": "https://www.schooldigger.com/go/GA/districtrank.aspx"
+      },
+      "county": {
+        "countyName": "Fulton County",
+        "countyURL": "https://www.schooldigger.com/go/GA/county/Fulton+County/search.aspx"
+      },
+      "rankHistory": [
+        {
+          "year": 2025,
+          "rank": 29,
+          "rankOf": 452,
+          "rankStars": 5,
+          "rankLevel": "High",
+          "rankStatewidePercentage": 93.58,
+          "averageStandardScore": 85.89821
+        },
+        {
+          "year": 2024,
+          "rank": 36,
+          "rankOf": 458,
+          "rankStars": 5,
+          "rankLevel": "High",
+          "rankStatewidePercentage": 92.14,
+          "averageStandardScore": 84.10146
+        }
+      ],
+      "rankMovement": 7,
+      "schoolYearlyDetails": [
+        {
+          "year": 2025,
+          "numberOfStudents": 2024,
+          "percentFreeDiscLunch": 15.12,
+          "percentofAfricanAmericanStudents": 16.75,
+          "percentofAsianStudents": 31.77,
+          "percentofHispanicStudents": 14.92,
+          "percentofIndianStudents": 0.15,
+          "percentofPacificIslanderStudents": 0.05,
+          "percentofWhiteStudents": 31.77,
+          "percentofTwoOrMoreRaceStudents": 4.59,
+          "percentofUnspecifiedRaceStudents": null,
+          "teachersFulltime": 116.2,
+          "pupilTeacherRatio": 17.4,
+          "numberofAfricanAmericanStudents": 339,
+          "numberofAsianStudents": 643,
+          "numberofHispanicStudents": 302,
+          "numberofIndianStudents": 3,
+          "numberofPacificIslanderStudents": 1,
+          "numberofWhiteStudents": 643,
+          "numberofTwoOrMoreRaceStudents": 93,
+          "numberofUnspecifiedRaceStudents": null
+        }
+      ],
+      "isPrivate": false,
+      "privateDays": null,
+      "privateHours": null,
+      "privateHasLibrary": null,
+      "privateCoed": null,
+      "privateOrientation": null
+    },
+    {
+      "schoolid": "130029002350",
+      "schoolName": "Apalachee High School",
+      "phone": "(770) 586-5111",
+      "url": "https://www.schooldigger.com/go/GA/schools/0029002350/school.aspx",
+      "urlCompare": "https://www.schooldigger.com/go/GA/schools/0029002350/search.aspx",
+      "address": {
+        "street": "940 Haymon Morris Rd",
+        "city": "Winder",
+        "state": "GA",
+        "stateFull": "Georgia",
+        "zip": "30680",
+        "zip4": "",
+        "cityURL": "https://www.schooldigger.com/go/GA/city/Winder/search.aspx",
+        "zipURL": "https://www.schooldigger.com/go/GA/zip/30680/search.aspx",
+        "html": "940 Haymon Morris Rd<br />Winder, GA 30680"
+      },
+      "lowGrade": "9",
+      "highGrade": "12",
+      "schoolLevel": "High",
+      "isCharterSchool": "No",
+      "isMagnetSchool": "No",
+      "isVirtualSchool": "No",
+      "isTitleISchool": "No",
+      "isTitleISchoolwideSchool": "No",
+      "hasBoundary": false,
+      "district": {
+        "districtID": "1300290",
+        "districtName": "Barrow County",
+        "url": "https://www.schooldigger.com/go/GA/district/00290/search.aspx",
+        "rankURL": "https://www.schooldigger.com/go/GA/districtrank.aspx"
+      },
+      "county": {
+        "countyName": "Barrow County",
+        "countyURL": "https://www.schooldigger.com/go/GA/county/Barrow+County/search.aspx"
+      },
+      "rankHistory": [
+        {
+          "year": 2025,
+          "rank": 306,
+          "rankOf": 452,
+          "rankStars": 2,
+          "rankLevel": "High",
+          "rankStatewidePercentage": 32.3,
+          "averageStandardScore": 28.83187
+        },
+        {
+          "year": 2024,
+          "rank": 233,
+          "rankOf": 458,
+          "rankStars": 2,
+          "rankLevel": "High",
+          "rankStatewidePercentage": 49.13,
+          "averageStandardScore": 41.63991
+        }
+      ],
+      "rankMovement": -73,
+      "schoolYearlyDetails": [
+        {
+          "year": 2025,
+          "numberOfStudents": 1949,
+          "percentFreeDiscLunch": 60.85,
+          "percentofAfricanAmericanStudents": 19.50,
+          "percentofAsianStudents": 3.80,
+          "percentofHispanicStudents": 31.35,
+          "percentofIndianStudents": 0.05,
+          "percentofPacificIslanderStudents": 0.0,
+          "percentofWhiteStudents": 40.23,
+          "percentofTwoOrMoreRaceStudents": 5.08,
+          "percentofUnspecifiedRaceStudents": null,
+          "teachersFulltime": 131.7,
+          "pupilTeacherRatio": 14.7,
+          "numberofAfricanAmericanStudents": 380,
+          "numberofAsianStudents": 74,
+          "numberofHispanicStudents": 611,
+          "numberofIndianStudents": 1,
+          "numberofPacificIslanderStudents": 0,
+          "numberofWhiteStudents": 784,
+          "numberofTwoOrMoreRaceStudents": 99,
+          "numberofUnspecifiedRaceStudents": null
+        }
+      ],
+      "isPrivate": false,
+      "privateDays": null,
+      "privateHours": null,
+      "privateHasLibrary": null,
+      "privateCoed": null,
+      "privateOrientation": null
+    },
+    {
+      "schoolid": "130006000010",
+      "schoolName": "Appling County High School",
+      "phone": "(912) 367-8610",
+      "url": "https://www.schooldigger.com/go/GA/schools/0006000010/school.aspx",
+      "urlCompare": "https://www.schooldigger.com/go/GA/schools/0006000010/search.aspx",
+      "address": {
+        "street": "482 Blackshear Hwy",
+        "city": "Baxley",
+        "state": "GA",
+        "stateFull": "Georgia",
+        "zip": "31513",
+        "zip4": "",
+        "cityURL": "https://www.schooldigger.com/go/GA/city/Baxley/search.aspx",
+        "zipURL": "https://www.schooldigger.com/go/GA/zip/31513/search.aspx",
+        "html": "482 Blackshear Hwy<br />Baxley, GA 31513"
+      },
+      "lowGrade": "9",
+      "highGrade": "12",
+      "schoolLevel": "High",
+      "isCharterSchool": "No",
+      "isMagnetSchool": "No",
+      "isVirtualSchool": "No",
+      "isTitleISchool": "Yes",
+      "isTitleISchoolwideSchool": "No",
+      "hasBoundary": false,
+      "district": {
+        "districtID": "1300060",
+        "districtName": "Appling County",
+        "url": "https://www.schooldigger.com/go/GA/district/00060/search.aspx",
+        "rankURL": "https://www.schooldigger.com/go/GA/districtrank.aspx"
+      },
+      "county": {
+        "countyName": "Appling County",
+        "countyURL": "https://www.schooldigger.com/go/GA/county/Appling+County/search.aspx"
+      },
+      "rankHistory": [
+        {
+          "year": 2025,
+          "rank": 208,
+          "rankOf": 452,
+          "rankStars": 3,
+          "rankLevel": "High",
+          "rankStatewidePercentage": 53.98,
+          "averageStandardScore": 44.14625
+        },
+        {
+          "year": 2024,
+          "rank": 290,
+          "rankOf": 458,
+          "rankStars": 2,
+          "rankLevel": "High",
+          "rankStatewidePercentage": 36.68,
+          "averageStandardScore": 30.71846
+        }
+      ],
+      "rankMovement": 82,
+      "schoolYearlyDetails": [
+        {
+          "year": 2025,
+          "numberOfStudents": 1013,
+          "percentFreeDiscLunch": 98.91,
+          "percentofAfricanAmericanStudents": 23.79,
+          "percentofAsianStudents": 0.79,
+          "percentofHispanicStudents": 19.45,
+          "percentofIndianStudents": 0.0,
+          "percentofPacificIslanderStudents": 0.0,
+          "percentofWhiteStudents": 51.63,
+          "percentofTwoOrMoreRaceStudents": 4.34,
+          "percentofUnspecifiedRaceStudents": null,
+          "teachersFulltime": 69.6,
+          "pupilTeacherRatio": 14.5,
+          "numberofAfricanAmericanStudents": 241,
+          "numberofAsianStudents": 8,
+          "numberofHispanicStudents": 197,
+          "numberofIndianStudents": 0,
+          "numberofPacificIslanderStudents": 0,
+          "numberofWhiteStudents": 523,
+          "numberofTwoOrMoreRaceStudents": 44,
+          "numberofUnspecifiedRaceStudents": null
+        }
+      ],
+      "isPrivate": false,
+      "privateDays": null,
+      "privateHours": null,
+      "privateHasLibrary": null,
+      "privateCoed": null,
+      "privateOrientation": null
+    }
+  ]
+}

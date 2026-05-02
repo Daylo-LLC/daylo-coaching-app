@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect } from "react";
+import { useState, useEffect } from "react";
 import {
   View,
   Text,
@@ -13,9 +13,18 @@ import {
 import { router } from "expo-router";
 import { useAuthStore } from "../src/store/auth";
 import { supabase } from "../src/lib/supabase";
-import { Circle } from "lucide-react-native";
 
 const SPORTS = ["football", "soccer"] as const;
+const DIVISIONS = [
+  "A-Public",
+  "A-Private",
+  "2A",
+  "3A",
+  "4A",
+  "5A",
+  "6A",
+  "7A",
+] as const;
 
 export default function Onboarding() {
   const { profile, fetchProfile } = useAuthStore();
@@ -26,20 +35,31 @@ export default function Onboarding() {
   const [lastName, setLastName] = useState(profile?.last_name || "");
   const [phone, setPhone] = useState(profile?.phone || "");
 
-  // Step 1: School
-  const [schoolName, setSchoolName] = useState("");
-  const [schoolCity, setSchoolCity] = useState("");
-  const [schoolState, setSchoolState] = useState("");
-  const [schoolAddress, setSchoolAddress] = useState("");
-  const [schoolZip, setSchoolZip] = useState("");
-  const [schoolMascot, setSchoolMascot] = useState("");
-  const [schoolConference, setSchoolConference] = useState("");
-  const [schoolDivision, setSchoolDivision] = useState("");
-
-  // Step 2: Sport selection
-  const [selectedSports, setSelectedSports] = useState<string[]>([]);
+  // Step 1: Sport + Division
+  const [selectedSport, setSelectedSport] = useState<string>("");
+  const [selectedDivision, setSelectedDivision] = useState<string>("");
+  const [schoolName, setSchoolName] = useState<string>("");
 
   const [loading, setLoading] = useState(false);
+
+  // Fetch school name for display
+  useEffect(() => {
+    const fetchSchool = async () => {
+      if (!profile?.school_id) return;
+      const { data } = await supabase
+        .from("schools")
+        .select("name, division")
+        .eq("id", profile.school_id)
+        .single();
+      if (data) {
+        setSchoolName(data.name);
+        if (data.division) {
+          setSelectedDivision(data.division);
+        }
+      }
+    };
+    fetchSchool();
+  }, [profile?.school_id]);
 
   const handleSaveProfile = async () => {
     if (!firstName || !lastName) {
@@ -63,82 +83,56 @@ export default function Onboarding() {
     }
   };
 
-  const handleSaveSchool = async () => {
-    if (!schoolName) {
-      Alert.alert("Error", "School name is required.");
-      return;
-    }
-    setLoading(true);
-
-    const { data: school, error: schoolErr } = await supabase
-      .from("schools")
-      .insert({
-        name: schoolName.trim(),
-        city: schoolCity.trim() || null,
-        state: schoolState.trim() || null,
-        address: schoolAddress.trim() || null,
-        zip_code: schoolZip.trim() || null,
-        mascot: schoolMascot.trim() || null,
-        conference: schoolConference.trim() || null,
-        division: schoolDivision.trim() || null,
-        created_by: profile!.id,
-      })
-      .select()
-      .single();
-
-    setLoading(false);
-    if (schoolErr) {
-      Alert.alert("Error", schoolErr.message);
-    } else if (school) {
-      setStep(2);
-    }
-  };
-
   const handleFinish = async () => {
-    if (selectedSports.length === 0) {
-      Alert.alert("Error", "Select at least one sport.");
+    if (!selectedSport) {
+      Alert.alert("Error", "Please select your sport.");
       return;
     }
+    if (!selectedDivision) {
+      Alert.alert("Error", "Please select your division.");
+      return;
+    }
+
+    const schoolId = profile?.school_id;
+    if (!schoolId) {
+      Alert.alert(
+        "Error",
+        "No school linked to your account. Please contact support.",
+      );
+      return;
+    }
+
     setLoading(true);
 
-    // Get the school we just created
-    const { data: schools } = await supabase
-      .from("schools")
-      .select("id")
-      .eq("created_by", profile!.id)
-      .order("created_at", { ascending: false })
-      .limit(1);
-
-    if (!schools || schools.length === 0) {
-      setLoading(false);
-      Alert.alert("Error", "Could not find school. Please try again.");
-      return;
-    }
-
-    const schoolId = schools[0].id;
-
-    const inserts = selectedSports.map((sport, i) => ({
+    // Insert coach_schools row
+    const { error: csError } = await supabase.from("coach_schools").insert({
       coach_id: profile!.id,
       school_id: schoolId,
-      sport,
-      is_primary: i === 0,
-    }));
+      sport: selectedSport,
+      is_primary: true,
+    });
 
-    const { error } = await supabase.from("coach_schools").insert(inserts);
+    if (csError) {
+      setLoading(false);
+      Alert.alert("Error", csError.message);
+      return;
+    }
+
+    // Update school division if not already set
+    const { error: divError } = await supabase
+      .from("schools")
+      .update({ division: selectedDivision })
+      .eq("id", schoolId);
+
+    if (divError) {
+      setLoading(false);
+      Alert.alert("Error", divError.message);
+      return;
+    }
 
     setLoading(false);
-    if (error) {
-      Alert.alert("Error", error.message);
-    } else {
-      await fetchProfile();
-      router.replace("/(tabs)/home");
-    }
-  };
-
-  const toggleSport = (s: string) => {
-    setSelectedSports((prev) =>
-      prev.includes(s) ? prev.filter((x) => x !== s) : [...prev, s],
-    );
+    await fetchProfile();
+    router.replace("/(drawer)/(tabs)/home");
   };
 
   return (
@@ -149,7 +143,7 @@ export default function Onboarding() {
       <ScrollView contentContainerStyle={{ padding: 24, paddingBottom: 48 }}>
         {/* Progress */}
         <View style={{ flexDirection: "row", gap: 8, marginBottom: 32 }}>
-          {[0, 1, 2].map((i) => (
+          {[0, 1].map((i) => (
             <View
               key={i}
               style={{
@@ -291,300 +285,98 @@ export default function Onboarding() {
                 marginBottom: 4,
               }}
             >
-              Your School
+              Sport & Division
             </Text>
             <Text style={{ fontSize: 14, color: "#6B7280", marginBottom: 24 }}>
-              Enter your school's information
+              Tell us what you coach
             </Text>
 
+            {/* School display (read-only) */}
+            {schoolName ? (
+              <View
+                style={{
+                  backgroundColor: "#F0FDF4",
+                  borderWidth: 1,
+                  borderColor: "#10B981",
+                  borderRadius: 12,
+                  padding: 16,
+                  marginBottom: 24,
+                }}
+              >
+                <Text
+                  style={{ fontSize: 12, color: "#6B7280", marginBottom: 4 }}
+                >
+                  Your School
+                </Text>
+                <Text
+                  style={{
+                    fontSize: 16,
+                    fontWeight: "700",
+                    color: "#1B2A4A",
+                  }}
+                >
+                  {schoolName}
+                </Text>
+              </View>
+            ) : null}
+
+            {/* Sport Selection */}
             <Text
               style={{
                 fontSize: 14,
                 fontWeight: "600",
                 color: "#374151",
-                marginBottom: 6,
+                marginBottom: 10,
               }}
             >
-              School Name *
+              Sport *
             </Text>
-            <TextInput
-              style={{
-                backgroundColor: "#FFFFFF",
-                borderWidth: 1,
-                borderColor: "#D1D5DB",
-                borderRadius: 8,
-                padding: 14,
-                fontSize: 16,
-                marginBottom: 16,
-              }}
-              value={schoolName}
-              onChangeText={setSchoolName}
-              placeholder="Lincoln High School"
-              placeholderTextColor="#9CA3AF"
-            />
-
-            <View style={{ flexDirection: "row", gap: 12 }}>
-              <View style={{ flex: 2 }}>
-                <Text
-                  style={{
-                    fontSize: 14,
-                    fontWeight: "600",
-                    color: "#374151",
-                    marginBottom: 6,
-                  }}
-                >
-                  City
-                </Text>
-                <TextInput
-                  style={{
-                    backgroundColor: "#FFFFFF",
-                    borderWidth: 1,
-                    borderColor: "#D1D5DB",
-                    borderRadius: 8,
-                    padding: 14,
-                    fontSize: 16,
-                    marginBottom: 16,
-                  }}
-                  value={schoolCity}
-                  onChangeText={setSchoolCity}
-                  placeholder="Dallas"
-                  placeholderTextColor="#9CA3AF"
-                />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text
-                  style={{
-                    fontSize: 14,
-                    fontWeight: "600",
-                    color: "#374151",
-                    marginBottom: 6,
-                  }}
-                >
-                  State
-                </Text>
-                <TextInput
-                  style={{
-                    backgroundColor: "#FFFFFF",
-                    borderWidth: 1,
-                    borderColor: "#D1D5DB",
-                    borderRadius: 8,
-                    padding: 14,
-                    fontSize: 16,
-                    marginBottom: 16,
-                  }}
-                  value={schoolState}
-                  onChangeText={setSchoolState}
-                  placeholder="TX"
-                  placeholderTextColor="#9CA3AF"
-                  maxLength={2}
-                  autoCapitalize="characters"
-                />
-              </View>
-            </View>
-
-            <Text
-              style={{
-                fontSize: 14,
-                fontWeight: "600",
-                color: "#374151",
-                marginBottom: 6,
-              }}
-            >
-              Address
-            </Text>
-            <TextInput
-              style={{
-                backgroundColor: "#FFFFFF",
-                borderWidth: 1,
-                borderColor: "#D1D5DB",
-                borderRadius: 8,
-                padding: 14,
-                fontSize: 16,
-                marginBottom: 16,
-              }}
-              value={schoolAddress}
-              onChangeText={setSchoolAddress}
-              placeholder="123 Main St"
-              placeholderTextColor="#9CA3AF"
-            />
-
-            <Text
-              style={{
-                fontSize: 14,
-                fontWeight: "600",
-                color: "#374151",
-                marginBottom: 6,
-              }}
-            >
-              Zip Code
-            </Text>
-            <TextInput
-              style={{
-                backgroundColor: "#FFFFFF",
-                borderWidth: 1,
-                borderColor: "#D1D5DB",
-                borderRadius: 8,
-                padding: 14,
-                fontSize: 16,
-                marginBottom: 16,
-              }}
-              value={schoolZip}
-              onChangeText={setSchoolZip}
-              placeholder="75001"
-              placeholderTextColor="#9CA3AF"
-              keyboardType="number-pad"
-            />
-
-            <Text
-              style={{
-                fontSize: 14,
-                fontWeight: "600",
-                color: "#374151",
-                marginBottom: 6,
-              }}
-            >
-              Mascot
-            </Text>
-            <TextInput
-              style={{
-                backgroundColor: "#FFFFFF",
-                borderWidth: 1,
-                borderColor: "#D1D5DB",
-                borderRadius: 8,
-                padding: 14,
-                fontSize: 16,
-                marginBottom: 16,
-              }}
-              value={schoolMascot}
-              onChangeText={setSchoolMascot}
-              placeholder="Lions"
-              placeholderTextColor="#9CA3AF"
-            />
-
-            <View style={{ flexDirection: "row", gap: 12 }}>
-              <View style={{ flex: 1 }}>
-                <Text
-                  style={{
-                    fontSize: 14,
-                    fontWeight: "600",
-                    color: "#374151",
-                    marginBottom: 6,
-                  }}
-                >
-                  Conference
-                </Text>
-                <TextInput
-                  style={{
-                    backgroundColor: "#FFFFFF",
-                    borderWidth: 1,
-                    borderColor: "#D1D5DB",
-                    borderRadius: 8,
-                    padding: 14,
-                    fontSize: 16,
-                    marginBottom: 16,
-                  }}
-                  value={schoolConference}
-                  onChangeText={setSchoolConference}
-                  placeholder="District 7"
-                  placeholderTextColor="#9CA3AF"
-                />
-              </View>
-              <View style={{ flex: 1 }}>
-                <Text
-                  style={{
-                    fontSize: 14,
-                    fontWeight: "600",
-                    color: "#374151",
-                    marginBottom: 6,
-                  }}
-                >
-                  Division
-                </Text>
-                <TextInput
-                  style={{
-                    backgroundColor: "#FFFFFF",
-                    borderWidth: 1,
-                    borderColor: "#D1D5DB",
-                    borderRadius: 8,
-                    padding: 14,
-                    fontSize: 16,
-                    marginBottom: 16,
-                  }}
-                  value={schoolDivision}
-                  onChangeText={setSchoolDivision}
-                  placeholder="5A"
-                  placeholderTextColor="#9CA3AF"
-                />
-              </View>
-            </View>
-
-            <TouchableOpacity
-              onPress={handleSaveSchool}
-              disabled={loading}
-              style={{
-                backgroundColor: "#1B2A4A",
-                borderRadius: 8,
-                padding: 16,
-                alignItems: "center",
-                opacity: loading ? 0.7 : 1,
-              }}
-            >
-              {loading ? (
-                <ActivityIndicator color="#FFFFFF" />
-              ) : (
-                <Text
-                  style={{ color: "#FFFFFF", fontSize: 16, fontWeight: "700" }}
-                >
-                  Continue
-                </Text>
-              )}
-            </TouchableOpacity>
-          </>
-        )}
-
-        {step === 2 && (
-          <>
-            <Text
-              style={{
-                fontSize: 24,
-                fontWeight: "800",
-                color: "#1B2A4A",
-                marginBottom: 4,
-              }}
-            >
-              Select Sports
-            </Text>
-            <Text style={{ fontSize: 14, color: "#6B7280", marginBottom: 24 }}>
-              Which sports do you coach?
-            </Text>
-
-            <View style={{ gap: 12, marginBottom: 32 }}>
+            <View style={{ gap: 10, marginBottom: 24 }}>
               {SPORTS.map((s) => (
                 <TouchableOpacity
                   key={s}
-                  onPress={() => toggleSport(s)}
+                  onPress={() => setSelectedSport(s)}
                   style={{
                     flexDirection: "row",
                     alignItems: "center",
-                    backgroundColor: selectedSports.includes(s)
-                      ? "#1B2A4A"
-                      : "#FFFFFF",
+                    backgroundColor:
+                      selectedSport === s ? "#1B2A4A" : "#FFFFFF",
                     borderWidth: 1,
-                    borderColor: selectedSports.includes(s)
-                      ? "#1B2A4A"
-                      : "#D1D5DB",
+                    borderColor: selectedSport === s ? "#1B2A4A" : "#D1D5DB",
                     borderRadius: 12,
-                    padding: 20,
+                    padding: 18,
                   }}
                 >
-                  <Text style={{ marginRight: 16 }}>
-                    <Circle size={28} />
-                  </Text>
+                  <View
+                    style={{
+                      width: 24,
+                      height: 24,
+                      borderRadius: 12,
+                      borderWidth: 2,
+                      borderColor: selectedSport === s ? "#FFFFFF" : "#D1D5DB",
+                      backgroundColor:
+                        selectedSport === s ? "#F97316" : "transparent",
+                      marginRight: 14,
+                      justifyContent: "center",
+                      alignItems: "center",
+                    }}
+                  >
+                    {selectedSport === s && (
+                      <View
+                        style={{
+                          width: 10,
+                          height: 10,
+                          borderRadius: 5,
+                          backgroundColor: "#FFFFFF",
+                        }}
+                      />
+                    )}
+                  </View>
                   <Text
                     style={{
-                      fontSize: 18,
+                      fontSize: 17,
                       fontWeight: "700",
-                      color: selectedSports.includes(s) ? "#FFFFFF" : "#374151",
+                      color: selectedSport === s ? "#FFFFFF" : "#374151",
                     }}
                   >
                     {s.charAt(0).toUpperCase() + s.slice(1)}
@@ -593,11 +385,60 @@ export default function Onboarding() {
               ))}
             </View>
 
+            {/* Division Selection */}
+            <Text
+              style={{
+                fontSize: 14,
+                fontWeight: "600",
+                color: "#374151",
+                marginBottom: 10,
+              }}
+            >
+              GHSA Classification *
+            </Text>
+            <View
+              style={{
+                flexDirection: "row",
+                flexWrap: "wrap",
+                gap: 10,
+                marginBottom: 32,
+              }}
+            >
+              {DIVISIONS.map((d) => (
+                <TouchableOpacity
+                  key={d}
+                  onPress={() => setSelectedDivision(d)}
+                  style={{
+                    paddingHorizontal: 16,
+                    paddingVertical: 12,
+                    borderRadius: 10,
+                    borderWidth: 1,
+                    borderColor: selectedDivision === d ? "#F97316" : "#D1D5DB",
+                    backgroundColor:
+                      selectedDivision === d ? "#FFF7ED" : "#FFFFFF",
+                    minWidth: 72,
+                    alignItems: "center",
+                  }}
+                >
+                  <Text
+                    style={{
+                      fontSize: 15,
+                      fontWeight: "700",
+                      color: selectedDivision === d ? "#F97316" : "#374151",
+                    }}
+                  >
+                    {d}
+                  </Text>
+                </TouchableOpacity>
+              ))}
+            </View>
+
             <TouchableOpacity
               onPress={handleFinish}
-              disabled={loading}
+              disabled={loading || !selectedSport || !selectedDivision}
               style={{
-                backgroundColor: "#F97316",
+                backgroundColor:
+                  !selectedSport || !selectedDivision ? "#9CA3AF" : "#F97316",
                 borderRadius: 8,
                 padding: 16,
                 alignItems: "center",

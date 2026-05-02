@@ -16,6 +16,7 @@
     "ios": {
       "supportsTablet": true,
       "bundleIdentifier": "com.daylocoaching.app",
+      "appleTeamId": "3FC3GW9Y9B",
       "infoPlist": {
         "NSCalendarsUsageDescription": "Daylo needs access to your calendar to export confirmed games.",
         "ITSAppUsesNonExemptEncryption": false
@@ -53,8 +54,7 @@
       ],
       "expo-calendar",
       "expo-image-picker",
-      "expo-document-picker",
-      "@sentry/react-native"
+      "expo-document-picker"
     ],
     "extra": {
       "router": {},

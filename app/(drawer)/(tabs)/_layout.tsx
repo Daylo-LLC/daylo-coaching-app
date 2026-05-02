@@ -1,8 +1,6 @@
-import { useState } from "react";
-import { Tabs, useRouter } from "expo-router";
+import { Tabs } from "expo-router";
 import { TouchableOpacity } from "react-native";
 import { useNavigation, DrawerActions } from "@react-navigation/native";
-import { useAuthStore } from "../../../src/store/auth";
 import {
   Home,
   Search,
@@ -11,6 +9,7 @@ import {
   MessageSquare,
   Menu,
 } from "lucide-react-native";
+import Header from "@/components/Header";
 
 function TabIcon({ name, focused }: { name: string; focused: boolean }) {
   const icons: Record<string, any> = {
@@ -26,14 +25,6 @@ function TabIcon({ name, focused }: { name: string; focused: boolean }) {
 
 export default function TabsLayout() {
   const navigation = useNavigation();
-
-  const router = useRouter();
-  const { profile, signOut } = useAuthStore();
-
-  const handleSignOut = () => {
-    signOut();
-    router.replace("/(auth)/sign-in");
-  };
 
   return (
     <Tabs
@@ -54,8 +45,8 @@ export default function TabsLayout() {
         tabBarStyle: {
           backgroundColor: "#FFFFFF",
           borderTopColor: "#E5E7EB",
-          paddingBottom: 4,
-          height: 60,
+          paddingBottom: 24,
+          height: 75,
         },
         tabBarLabelStyle: {
           fontSize: 11,
@@ -70,23 +61,15 @@ export default function TabsLayout() {
           tabBarIcon: ({ focused }) => (
             <TabIcon name="home" focused={focused} />
           ),
+          headerShown: false,
         }}
       />
       <Tabs.Screen
         name="search"
         options={{
-          title: "Search",
+          title: "Find Games",
           tabBarIcon: ({ focused }) => (
             <TabIcon name="search" focused={focused} />
-          ),
-        }}
-      />
-      <Tabs.Screen
-        name="availability"
-        options={{
-          title: "Availability",
-          tabBarIcon: ({ focused }) => (
-            <TabIcon name="availability" focused={focused} />
           ),
         }}
       />
@@ -106,6 +89,7 @@ export default function TabsLayout() {
           tabBarIcon: ({ focused }) => (
             <TabIcon name="messages" focused={focused} />
           ),
+          header: () => <Header title="Messages" />,
         }}
       />
     </Tabs>

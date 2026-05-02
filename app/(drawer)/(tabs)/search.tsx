@@ -6,7 +6,12 @@ import {
   TouchableOpacity,
   FlatList,
   ActivityIndicator,
+  Platform,
 } from "react-native";
+import DateTimePicker, {
+  DateTimePickerEvent,
+} from "@react-native-community/datetimepicker";
+import moment from "moment";
 import { router } from "expo-router";
 import { supabase } from "../../../src/lib/supabase";
 import { Tables } from "../../../src/types/database";
@@ -21,13 +26,53 @@ export default function Search() {
   const [sport, setSport] = useState<string | null>(null);
   const [division, setDivision] = useState<string | null>(null);
   const [conference, setConference] = useState("");
+  const [date, setDate] = useState<Date | null>(null);
+  const [showDatePicker, setShowDatePicker] = useState(false);
   const [results, setResults] = useState<School[]>([]);
   const [loading, setLoading] = useState(false);
   const [searched, setSearched] = useState(false);
 
+  const handleDateChange = (
+    event: DateTimePickerEvent,
+    selectedDate?: Date,
+  ) => {
+    if (Platform.OS === "android") {
+      setShowDatePicker(false);
+    }
+    if (selectedDate) {
+      setDate(selectedDate);
+    }
+  };
+
   const handleSearch = useCallback(async () => {
     setLoading(true);
     setSearched(true);
+
+    // If a date is selected, find schools with open availability on that date
+    let schoolIdsWithAvailability: string[] | null = null;
+    if (date) {
+      const dateStr = moment(date).format("YYYY-MM-DD");
+      let availQuery = supabase
+        .from("availability")
+        .select("school_id")
+        .eq("date", dateStr)
+        .eq("is_booked", false);
+
+      if (sport) {
+        availQuery = availQuery.eq("sport", sport);
+      }
+
+      const { data: availData } = await availQuery;
+      schoolIdsWithAvailability = Array.from(
+        new Set((availData || []).map((a) => a.school_id).filter(Boolean)),
+      );
+
+      if (schoolIdsWithAvailability.length === 0) {
+        setResults([]);
+        setLoading(false);
+        return;
+      }
+    }
 
     let q = supabase.from("schools").select("*");
 
@@ -40,13 +85,16 @@ export default function Search() {
     if (conference.trim()) {
       q = q.ilike("conference", `%${conference.trim()}%`);
     }
+    if (schoolIdsWithAvailability) {
+      q = q.in("id", schoolIdsWithAvailability);
+    }
 
     q = q.order("name", { ascending: true }).limit(50);
 
     const { data, error } = await q;
     setResults(data || []);
     setLoading(false);
-  }, [query, sport, division, conference]);
+  }, [query, sport, division, conference, date]);
 
   return (
     <View style={{ flex: 1, backgroundColor: "#F9FAFB" }}>
@@ -165,6 +213,83 @@ export default function Search() {
           value={conference}
           onChangeText={setConference}
         />
+
+        <Text
+          style={{
+            fontSize: 12,
+            fontWeight: "600",
+            color: "#6B7280",
+            marginBottom: 6,
+          }}
+        >
+          DATE (OPTIONAL)
+        </Text>
+        <View
+          style={{
+            flexDirection: "row",
+            gap: 8,
+            marginBottom: 12,
+            alignItems: "center",
+          }}
+        >
+          <TouchableOpacity
+            onPress={() => setShowDatePicker(!showDatePicker)}
+            style={{
+              flex: 1,
+              backgroundColor: "#F3F4F6",
+              borderRadius: 8,
+              padding: 12,
+            }}
+          >
+            <Text
+              style={{
+                fontSize: 14,
+                color: date ? "#374151" : "#9CA3AF",
+              }}
+            >
+              {date ? moment(date).format("ddd, MMM D, YYYY") : "Select a date"}
+            </Text>
+          </TouchableOpacity>
+          {date && (
+            <TouchableOpacity
+              onPress={() => setDate(null)}
+              style={{
+                paddingHorizontal: 12,
+                paddingVertical: 12,
+              }}
+            >
+              <Text style={{ color: "#9CA3AF", fontSize: 14 }}>Clear</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+
+        {showDatePicker && (
+          <View style={{ marginBottom: 12 }}>
+            <DateTimePicker
+              value={date || new Date()}
+              mode="date"
+              display={Platform.OS === "ios" ? "spinner" : "default"}
+              onChange={handleDateChange}
+              minimumDate={new Date()}
+            />
+            {Platform.OS === "ios" && (
+              <TouchableOpacity
+                onPress={() => setShowDatePicker(false)}
+                style={{
+                  alignSelf: "flex-end",
+                  paddingHorizontal: 12,
+                  paddingVertical: 6,
+                }}
+              >
+                <Text
+                  style={{ color: "#F97316", fontWeight: "600", fontSize: 14 }}
+                >
+                  Done
+                </Text>
+              </TouchableOpacity>
+            )}
+          </View>
+        )}
 
         <TouchableOpacity
           onPress={handleSearch}

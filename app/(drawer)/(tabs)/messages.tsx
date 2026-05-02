@@ -21,6 +21,9 @@ interface ConversationWithDetails {
     last_name: string | null;
     avatar_url: string | null;
   };
+  school?: {
+    name: string | null;
+  };
   last_message?: {
     content: string | null;
     created_at: string;
@@ -60,10 +63,15 @@ export default function MessagesScreen() {
           ? convo.participant_b
           : convo.participant_a;
 
-      const [profileRes, msgRes, unreadRes] = await Promise.all([
+      const [profileRes, schoolRes, msgRes, unreadRes] = await Promise.all([
         supabase
           .from("profiles")
-          .select("first_name, last_name, avatar_url")
+          .select("first_name, last_name, avatar_url, school_id")
+          .eq("id", otherId)
+          .single(),
+        supabase
+          .from("profiles")
+          .select("school_id")
           .eq("id", otherId)
           .single(),
         supabase
@@ -81,9 +89,20 @@ export default function MessagesScreen() {
           .neq("sender_id", profile.id),
       ]);
 
+      let schoolData = null;
+      if (schoolRes.data?.school_id) {
+        const { data: school } = await supabase
+          .from("schools")
+          .select("name")
+          .eq("id", schoolRes.data.school_id)
+          .single();
+        schoolData = school;
+      }
+
       enriched.push({
         ...convo,
         other_user: profileRes.data || undefined,
+        school: schoolData || undefined,
         last_message: msgRes.data || undefined,
         unread_count: unreadRes.count || 0,
       });
@@ -199,20 +218,35 @@ export default function MessagesScreen() {
                   justifyContent: "space-between",
                 }}
               >
-                <Text
-                  style={{
-                    fontSize: 16,
-                    fontWeight: item.unread_count > 0 ? "700" : "600",
-                    color: "#1B2A4A",
-                  }}
-                >
-                  {item.other_user
-                    ? `${item.other_user.first_name || ""} ${item.other_user.last_name || ""}`.trim() ||
-                      "Coach"
-                    : "Coach"}
-                </Text>
+                <View style={{ flex: 1 }}>
+                  <Text
+                    style={{
+                      fontSize: 16,
+                      fontWeight: item.unread_count > 0 ? "700" : "600",
+                      color: "#1B2A4A",
+                    }}
+                  >
+                    {item.other_user
+                      ? `${item.other_user.first_name || ""} ${item.other_user.last_name || ""}`.trim() ||
+                        "Coach"
+                      : "Coach"}
+                  </Text>
+                  {item.school?.name && (
+                    <Text
+                      style={{
+                        fontSize: 12,
+                        color: "#6B7280",
+                        marginTop: 2,
+                      }}
+                    >
+                      {item.school.name}
+                    </Text>
+                  )}
+                </View>
                 {item.last_message && (
-                  <Text style={{ fontSize: 12, color: "#9CA3AF" }}>
+                  <Text
+                    style={{ fontSize: 12, color: "#9CA3AF", marginLeft: 8 }}
+                  >
                     {formatTime(item.last_message.created_at)}
                   </Text>
                 )}
