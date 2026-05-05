@@ -16,6 +16,11 @@ import { supabase } from "../../src/lib/supabase";
 import { Tables } from "../../src/types/database";
 import { Phone, Mail, MapPin } from "lucide-react-native";
 import PageHeader from "@/components/PageHeader";
+import {
+  resolveVenue,
+  type HomeAwayPref,
+  type ResolvedVenue,
+} from "../../src/lib/venue";
 
 type School = Tables<"schools">;
 type Availability = Tables<"availability">;
@@ -37,10 +42,28 @@ export default function SchoolDetail() {
   const [selectedSlot, setSelectedSlot] = useState<Availability | null>(null);
   const [message, setMessage] = useState("");
   const [sending, setSending] = useState(false);
+  const [requesterSchool, setRequesterSchool] = useState<School | null>(null);
+  const [venueInput, setVenueInput] = useState("");
 
   useEffect(() => {
     fetchSchoolDetails();
   }, [id]);
+
+  useEffect(() => {
+    const loadRequesterSchool = async () => {
+      if (!profile?.school_id) {
+        setRequesterSchool(null);
+        return;
+      }
+      const { data } = await supabase
+        .from("schools")
+        .select("*")
+        .eq("id", profile.school_id)
+        .single();
+      setRequesterSchool(data || null);
+    };
+    loadRequesterSchool();
+  }, [profile?.school_id]);
 
   const fetchSchoolDetails = async () => {
     if (!id) return;
@@ -87,11 +110,34 @@ export default function SchoolDetail() {
       return;
     }
     setSelectedSlot(slot);
+    if (school) {
+      const resolved = resolveVenue({
+        pref: (slot.home_away_preference as HomeAwayPref) || "either",
+        slotVenue: slot.venue,
+        coachSchool: {
+          name: school.name,
+          address: school.address,
+          city: school.city,
+          state: school.state,
+        },
+        requesterSchool: requesterSchool
+          ? {
+              name: requesterSchool.name,
+              address: requesterSchool.address,
+              city: requesterSchool.city,
+              state: requesterSchool.state,
+            }
+          : null,
+      });
+      setVenueInput(resolved.prefill);
+    } else {
+      setVenueInput("");
+    }
     setShowRequestModal(true);
   };
 
   const sendRequest = async () => {
-    if (!profile || !selectedSlot || !message.trim()) return;
+    if (!profile || !selectedSlot) return;
 
     if (!profile.school_id) {
       Alert.alert(
@@ -100,6 +146,8 @@ export default function SchoolDetail() {
       );
       return;
     }
+
+    const finalVenue = venueInput.trim();
 
     setSending(true);
     try {
@@ -113,7 +161,8 @@ export default function SchoolDetail() {
         time_start: selectedSlot.time_start,
         time_end: selectedSlot.time_end,
         sport: selectedSlot.sport,
-        home_away: "away",
+        home_away: selectedSlot.home_away_preference || "either",
+        venue: finalVenue || null,
         status: "pending",
       });
 
@@ -123,6 +172,7 @@ export default function SchoolDetail() {
         Alert.alert("Success", "Game request sent!");
         setShowRequestModal(false);
         setMessage("");
+        setVenueInput("");
         setSelectedSlot(null);
         // Refresh slots
         fetchSchoolDetails();
@@ -404,22 +454,51 @@ export default function SchoolDetail() {
                       >
                         Sport: {slot.sport}
                       </Text>
-                      {slot.venue && (
-                        <View
-                          style={{
-                            flexDirection: "row",
-                            alignItems: "center",
-                            marginTop: 4,
-                          }}
-                        >
-                          <Text style={{ color: "#9CA3AF", marginRight: 4 }}>
-                            <MapPin size={12} />
-                          </Text>
-                          <Text style={{ fontSize: 12, color: "#9CA3AF" }}>
-                            {slot.venue}
-                          </Text>
-                        </View>
-                      )}
+                      {(() => {
+                        if (!school) return null;
+                        const resolved = resolveVenue({
+                          pref:
+                            (slot.home_away_preference as HomeAwayPref) ||
+                            "either",
+                          slotVenue: slot.venue,
+                          coachSchool: {
+                            name: school.name,
+                            address: school.address,
+                            city: school.city,
+                            state: school.state,
+                          },
+                          requesterSchool: requesterSchool
+                            ? {
+                                name: requesterSchool.name,
+                                address: requesterSchool.address,
+                                city: requesterSchool.city,
+                                state: requesterSchool.state,
+                              }
+                            : null,
+                        });
+                        return (
+                          <View
+                            style={{
+                              flexDirection: "row",
+                              alignItems: "center",
+                              marginTop: 4,
+                            }}
+                          >
+                            <Text style={{ color: "#9CA3AF", marginRight: 4 }}>
+                              <MapPin size={12} />
+                            </Text>
+                            <Text
+                              style={{
+                                fontSize: 12,
+                                color: "#9CA3AF",
+                                flex: 1,
+                              }}
+                            >
+                              {resolved.display}
+                            </Text>
+                          </View>
+                        );
+                      })()}
                     </View>
                     {!profile || profile.id === slot.coach_id ? null : (
                       <TouchableOpacity
@@ -496,6 +575,96 @@ export default function SchoolDetail() {
                 {moment(selectedSlot.time_start, "HH:mm:ss").format("h:mm A")}
               </Text>
             )}
+
+            {/* Venue */}
+            {selectedSlot &&
+              school &&
+              (() => {
+                const resolved: ResolvedVenue = resolveVenue({
+                  pref:
+                    (selectedSlot.home_away_preference as HomeAwayPref) ||
+                    "either",
+                  slotVenue: selectedSlot.venue,
+                  coachSchool: {
+                    name: school.name,
+                    address: school.address,
+                    city: school.city,
+                    state: school.state,
+                  },
+                  requesterSchool: requesterSchool
+                    ? {
+                        name: requesterSchool.name,
+                        address: requesterSchool.address,
+                        city: requesterSchool.city,
+                        state: requesterSchool.state,
+                      }
+                    : null,
+                });
+                return (
+                  <View style={{ marginBottom: 16 }}>
+                    <Text
+                      style={{
+                        fontSize: 13,
+                        fontWeight: "600",
+                        color: "#374151",
+                        marginBottom: 6,
+                      }}
+                    >
+                      Venue
+                    </Text>
+                    {resolved.editable ? (
+                      <>
+                        <TextInput
+                          style={{
+                            borderWidth: 1,
+                            borderColor: "#D1D5DB",
+                            borderRadius: 8,
+                            padding: 12,
+                            fontSize: 14,
+                          }}
+                          placeholder="Suggest a venue"
+                          placeholderTextColor="#9CA3AF"
+                          value={venueInput}
+                          onChangeText={setVenueInput}
+                        />
+                        <Text
+                          style={{
+                            fontSize: 11,
+                            color: "#9CA3AF",
+                            marginTop: 4,
+                          }}
+                        >
+                          You can change this later until the coach accepts.
+                        </Text>
+                      </>
+                    ) : (
+                      <View
+                        style={{
+                          backgroundColor: "#F3F4F6",
+                          borderRadius: 8,
+                          padding: 12,
+                        }}
+                      >
+                        <Text style={{ fontSize: 14, color: "#1B2A4A" }}>
+                          {resolved.display}
+                        </Text>
+                        <Text
+                          style={{
+                            fontSize: 11,
+                            color: "#9CA3AF",
+                            marginTop: 2,
+                          }}
+                        >
+                          {resolved.isSchoolAddressFallback
+                            ? "Using the host school's address"
+                            : "Set by coach"}
+                        </Text>
+                      </View>
+                    )}
+                  </View>
+                );
+              })()}
+
             <TextInput
               style={{
                 borderWidth: 1,

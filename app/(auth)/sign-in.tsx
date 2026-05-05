@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { Link, router } from "expo-router";
 import { useAuthStore } from "../../src/store/auth";
+import { Image } from "expo-image";
 
 export default function SignIn() {
   const [email, setEmail] = useState("");
@@ -61,9 +62,10 @@ export default function SignIn() {
         keyboardShouldPersistTaps="handled"
       >
         <View style={{ alignItems: "center", marginBottom: 48 }}>
-          <Text style={{ fontSize: 40, fontWeight: "800", color: "#1B2A4A" }}>
-            Daylo
-          </Text>
+          <Image
+            source={require("../../assets/logo.png")}
+            style={{ width: 170, height: 170 }}
+          />
           <Text style={{ fontSize: 16, color: "#6B7280", marginTop: 8 }}>
             Schedule games with ease
           </Text>

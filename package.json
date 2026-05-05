@@ -10,6 +10,7 @@
     "ios:dev:build": "eas build --profile development --platform ios",
     "ios:preview:build": "eas build --profile preview --platform ios",
     "ios:prod:build": "eas build --profile production --platform ios",
+    "ios:submit": "eas submit --platform ios",
     "android:dev:build": "eas build --profile development --platform android",
     "android:preview:build": "eas build --profile preview --platform android",
     "android:prod:build": "eas build --profile production --platform android"
@@ -24,6 +25,7 @@
     "@trpc/react-query": "^11.16.0",
     "@trpc/server": "^11.16.0",
     "expo": "~54.0.34",
+    "expo-av": "~16.0.8",
     "expo-calendar": "~15.0.8",
     "expo-constants": "~18.0.13",
     "expo-dev-client": "~6.0.21",

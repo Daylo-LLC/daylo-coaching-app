@@ -6,26 +6,36 @@ import {
   ActivityIndicator,
   Alert,
   ScrollView,
+  TextInput,
+  Modal,
 } from "react-native";
+import { Pencil } from "lucide-react-native";
 import { useRouter, useLocalSearchParams } from "expo-router";
 import { useAuthStore } from "../../src/store/auth";
 import { supabase } from "../../src/lib/supabase";
 import { Tables } from "../../src/types/database";
 import { exportGameToCalendar } from "../../src/lib/calendar";
+import { resolveVenue, type HomeAwayPref } from "../../src/lib/venue";
 import moment from "moment";
 import PageHeader from "@/components/PageHeader";
 
 type Request = Tables<"requests"> & {
   requester_school?: {
     name: string;
+    address: string | null;
     city: string | null;
     state: string | null;
   };
   recipient_school?: {
     name: string;
+    address: string | null;
     city: string | null;
     state: string | null;
   };
+  availability?: {
+    home_away_preference: string;
+    venue: string | null;
+  } | null;
 };
 
 export default function RequestDetailScreen() {
@@ -35,45 +45,73 @@ export default function RequestDetailScreen() {
   const [request, setRequest] = useState<Request | null>(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
+  // Venue editing (requester side, while pending)
+  const [editingVenue, setEditingVenue] = useState(false);
+  const [venueDraft, setVenueDraft] = useState("");
+  const [savingVenue, setSavingVenue] = useState(false);
+
+  // Accept-with-venue modal (coach side)
+  const [acceptModalVisible, setAcceptModalVisible] = useState(false);
+  const [acceptVenueDraft, setAcceptVenueDraft] = useState("");
+  const [accepting, setAccepting] = useState(false);
+
+  const fetchRequest = async () => {
     if (!id) return;
+    const { data: requestData } = await supabase
+      .from("requests")
+      .select("*")
+      .eq("id", id)
+      .single();
 
-    const fetchRequest = async () => {
-      const { data: requestData } = await supabase
-        .from("requests")
-        .select("*")
-        .eq("id", id)
-        .single();
+    if (requestData) {
+      const schoolIds = [
+        requestData.requester_school_id,
+        requestData.recipient_school_id,
+      ].filter(Boolean) as string[];
 
-      if (requestData) {
-        // Fetch schools separately due to relationship detection issues
-        const schoolIds = [
-          requestData.requester_school_id,
-          requestData.recipient_school_id,
-        ].filter(Boolean) as string[];
+      const { data: schoolsData } = await supabase
+        .from("schools")
+        .select("id, name, address, city, state")
+        .in("id", schoolIds);
 
-        const { data: schoolsData } = await supabase
-          .from("schools")
-          .select("id, name, city, state")
-          .in("id", schoolIds);
+      const schoolMap = new Map(schoolsData?.map((s) => [s.id, s]) || []);
 
-        const schoolMap = new Map(schoolsData?.map((s) => [s.id, s]) || []);
-
-        setRequest({
-          ...requestData,
-          requester_school: schoolMap.get(requestData.requester_school_id),
-          recipient_school: schoolMap.get(requestData.recipient_school_id),
-        });
+      // Fetch the linked availability for its home_away_preference
+      let availabilityData: Request["availability"] = null;
+      if (requestData.availability_id) {
+        const { data: av } = await supabase
+          .from("availability")
+          .select("home_away_preference, venue")
+          .eq("id", requestData.availability_id)
+          .single();
+        availabilityData = av || null;
       }
 
-      setLoading(false);
-    };
+      setRequest({
+        ...requestData,
+        requester_school: schoolMap.get(requestData.requester_school_id),
+        recipient_school: schoolMap.get(requestData.recipient_school_id),
+        availability: availabilityData,
+      });
+    }
 
+    setLoading(false);
+  };
+
+  useEffect(() => {
+    if (!id) return;
     fetchRequest();
   }, [id]);
 
   const handleAction = async (action: "accepted" | "declined") => {
-    const label = action === "accepted" ? "Accept" : "Decline";
+    if (action === "accepted") {
+      // Open accept modal for coach to optionally edit venue
+      setAcceptVenueDraft(request?.venue || "");
+      setAcceptModalVisible(true);
+      return;
+    }
+    // Decline is unchanged
+    const label = "Decline";
     Alert.alert(
       `${label} Request`,
       `Are you sure you want to ${label.toLowerCase()} this request?`,
@@ -81,7 +119,7 @@ export default function RequestDetailScreen() {
         { text: "Cancel", style: "cancel" },
         {
           text: label,
-          style: action === "declined" ? "destructive" : "default",
+          style: "destructive",
           onPress: async () => {
             const { error } = await supabase
               .from("requests")
@@ -96,6 +134,41 @@ export default function RequestDetailScreen() {
         },
       ],
     );
+  };
+
+  const handleSaveVenue = async () => {
+    if (!id) return;
+    setSavingVenue(true);
+    const { error } = await supabase
+      .from("requests")
+      .update({ venue: venueDraft.trim() || null })
+      .eq("id", id);
+    if (error) {
+      Alert.alert("Error", error.message);
+    } else {
+      setEditingVenue(false);
+      fetchRequest();
+    }
+    setSavingVenue(false);
+  };
+
+  const handleAcceptWithVenue = async () => {
+    if (!id) return;
+    setAccepting(true);
+    const { error } = await supabase
+      .from("requests")
+      .update({
+        status: "accepted",
+        venue: acceptVenueDraft.trim() || null,
+      })
+      .eq("id", id);
+    if (error) {
+      Alert.alert("Error", error.message);
+    } else {
+      setAcceptModalVisible(false);
+      fetchRequest();
+    }
+    setAccepting(false);
   };
 
   const handleMessage = async () => {
@@ -270,17 +343,127 @@ export default function RequestDetailScreen() {
               marginTop: 12,
             }}
           >
-            <Text style={{ fontSize: 14, color: "#6B7280", marginBottom: 4 }}>
-              Location
-            </Text>
+            <View
+              style={{
+                flexDirection: "row",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: 4,
+              }}
+            >
+              <Text style={{ fontSize: 14, color: "#6B7280" }}>Location</Text>
+              {isPending && !isIncoming && !editingVenue && request.venue && (
+                <TouchableOpacity
+                  onPress={() => {
+                    setVenueDraft(request.venue || "");
+                    setEditingVenue(true);
+                  }}
+                >
+                  <Pencil size={16} color="#6B7280" />
+                </TouchableOpacity>
+              )}
+            </View>
             <Text style={{ fontSize: 18, fontWeight: "700", color: "#1B2A4A" }}>
               {request.home_away.charAt(0).toUpperCase() +
                 request.home_away.slice(1)}
             </Text>
-            {request.venue && (
-              <Text style={{ fontSize: 16, color: "#374151", marginTop: 4 }}>
-                {request.venue}
-              </Text>
+            {editingVenue ? (
+              <View style={{ marginTop: 8 }}>
+                <TextInput
+                  style={{
+                    borderWidth: 1,
+                    borderColor: "#D1D5DB",
+                    borderRadius: 8,
+                    padding: 12,
+                    fontSize: 14,
+                    marginBottom: 8,
+                  }}
+                  value={venueDraft}
+                  onChangeText={setVenueDraft}
+                  placeholder="Enter venue"
+                />
+                <View style={{ flexDirection: "row", gap: 8 }}>
+                  <TouchableOpacity
+                    onPress={() => setEditingVenue(false)}
+                    style={{
+                      flex: 1,
+                      borderWidth: 1,
+                      borderColor: "#D1D5DB",
+                      borderRadius: 8,
+                      padding: 10,
+                      alignItems: "center",
+                    }}
+                  >
+                    <Text style={{ color: "#6B7280", fontWeight: "600" }}>
+                      Cancel
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={handleSaveVenue}
+                    disabled={savingVenue}
+                    style={{
+                      flex: 1,
+                      backgroundColor: savingVenue ? "#9CA3AF" : "#F97316",
+                      borderRadius: 8,
+                      padding: 10,
+                      alignItems: "center",
+                    }}
+                  >
+                    {savingVenue ? (
+                      <ActivityIndicator size="small" color="#FFFFFF" />
+                    ) : (
+                      <Text style={{ color: "#FFFFFF", fontWeight: "600" }}>
+                        Save
+                      </Text>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </View>
+            ) : (
+              <>
+                {request.venue ? (
+                  <Text
+                    style={{ fontSize: 16, color: "#374151", marginTop: 4 }}
+                  >
+                    {request.venue}
+                    {(() => {
+                      // Detect if venue looks like a school address fallback
+                      const schoolName = isIncoming
+                        ? request.recipient_school?.name
+                        : request.requester_school?.name;
+                      const addr = isIncoming
+                        ? request.recipient_school?.address
+                        : request.requester_school?.address;
+                      const city = isIncoming
+                        ? request.recipient_school?.city
+                        : request.requester_school?.city;
+                      const state = isIncoming
+                        ? request.recipient_school?.state
+                        : request.requester_school?.state;
+
+                      if (
+                        schoolName &&
+                        request.venue.startsWith(schoolName) &&
+                        (addr || city || state)
+                      ) {
+                        return (
+                          <Text style={{ fontSize: 12, color: "#9CA3AF" }}>
+                            {" "}
+                            (school address)
+                          </Text>
+                        );
+                      }
+                      return null;
+                    })()}
+                  </Text>
+                ) : (
+                  <Text
+                    style={{ fontSize: 16, color: "#9CA3AF", marginTop: 4 }}
+                  >
+                    TBD
+                  </Text>
+                )}
+              </>
             )}
           </View>
 
@@ -341,7 +524,12 @@ export default function RequestDetailScreen() {
           {/* Export to Calendar for accepted requests */}
           {isAccepted && (
             <TouchableOpacity
-              onPress={() =>
+              onPress={() => {
+                const isRequester =
+                  profile?.school_id === request.requester_school_id;
+                const opponent = isRequester
+                  ? request.recipient_school
+                  : request.requester_school;
                 exportGameToCalendar({
                   title: `${request.sport} game`,
                   date: request.date,
@@ -349,8 +537,10 @@ export default function RequestDetailScreen() {
                   timeEnd: request.time_end,
                   venue: request.venue,
                   sport: request.sport,
-                })
-              }
+                  opponentSchool: opponent?.name ?? null,
+                  url: `daylo:///request/${request.id}`,
+                });
+              }}
               style={{
                 flexDirection: "row",
                 alignItems: "center",
@@ -372,6 +562,108 @@ export default function RequestDetailScreen() {
           )}
         </View>
       </ScrollView>
+
+      {/* Accept-with-venue modal (coach side) */}
+      <Modal
+        visible={acceptModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setAcceptModalVisible(false)}
+      >
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: "rgba(0, 0, 0, 0.5)",
+            justifyContent: "center",
+            alignItems: "center",
+            padding: 20,
+          }}
+        >
+          <View
+            style={{
+              backgroundColor: "#FFFFFF",
+              borderRadius: 12,
+              padding: 20,
+              width: "100%",
+              maxWidth: 400,
+            }}
+          >
+            <Text
+              style={{
+                fontSize: 18,
+                fontWeight: "700",
+                color: "#1B2A4A",
+                marginBottom: 12,
+              }}
+            >
+              Accept Request
+            </Text>
+            <Text style={{ fontSize: 14, color: "#6B7280", marginBottom: 16 }}>
+              Review the venue before accepting. You can edit it if needed.
+            </Text>
+            <Text
+              style={{
+                fontSize: 13,
+                fontWeight: "600",
+                color: "#374151",
+                marginBottom: 6,
+              }}
+            >
+              Venue
+            </Text>
+            <TextInput
+              style={{
+                borderWidth: 1,
+                borderColor: "#D1D5DB",
+                borderRadius: 8,
+                padding: 12,
+                fontSize: 14,
+                marginBottom: 16,
+              }}
+              placeholder="Enter venue"
+              placeholderTextColor="#9CA3AF"
+              value={acceptVenueDraft}
+              onChangeText={setAcceptVenueDraft}
+            />
+            <View style={{ flexDirection: "row", gap: 12 }}>
+              <TouchableOpacity
+                onPress={() => setAcceptModalVisible(false)}
+                style={{
+                  flex: 1,
+                  borderWidth: 1,
+                  borderColor: "#D1D5DB",
+                  borderRadius: 8,
+                  padding: 12,
+                  alignItems: "center",
+                }}
+              >
+                <Text style={{ color: "#6B7280", fontWeight: "600" }}>
+                  Cancel
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleAcceptWithVenue}
+                disabled={accepting}
+                style={{
+                  flex: 1,
+                  backgroundColor: accepting ? "#9CA3AF" : "#10B981",
+                  borderRadius: 8,
+                  padding: 12,
+                  alignItems: "center",
+                }}
+              >
+                {accepting ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Text style={{ color: "#FFFFFF", fontWeight: "600" }}>
+                    Accept
+                  </Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </>
   );
 }

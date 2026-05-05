@@ -213,7 +213,7 @@ export default function RequestsScreen() {
         </Text>
         <Text style={{ fontSize: 13, color: "#6B7280", marginTop: 4 }}>
           {item.home_away.charAt(0).toUpperCase() + item.home_away.slice(1)}
-          {item.venue ? ` • ${item.venue}` : ""}
+          {item.venue ? ` • ${item.venue}` : " • TBD"}
         </Text>
 
         {tab === "incoming" && item.status === "pending" && (
@@ -320,7 +320,7 @@ export default function RequestsScreen() {
             onPress={() => setTab(t)}
             style={{
               flex: 1,
-              paddingVertical: 14,
+              paddingVertical: 15,
               alignItems: "center",
               borderBottomWidth: 2,
               borderBottomColor: tab === t ? "#F97316" : "transparent",

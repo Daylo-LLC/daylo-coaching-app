@@ -9,6 +9,7 @@ import {
   KeyboardAvoidingView,
   Platform,
   Alert,
+  Modal,
 } from "react-native";
 import { useLocalSearchParams, Stack, router } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
@@ -22,6 +23,7 @@ import {
   Video as VideoIcon,
 } from "lucide-react-native";
 import { Image as ExpoImage } from "expo-image";
+import { Video, ResizeMode } from "expo-av";
 import * as Linking from "expo-linking";
 import PageHeader from "@/components/PageHeader";
 
@@ -56,6 +58,9 @@ export default function ChatScreen() {
   const [otherName, setOtherName] = useState("Coach");
   const [userNames, setUserNames] = useState<Record<string, string>>({});
   const flatListRef = useRef<FlatList>(null);
+  const [imageModalVisible, setImageModalVisible] = useState(false);
+  const [modalImageUrl, setModalImageUrl] = useState<string | null>(null);
+  const videoRef = useRef<Video>(null);
 
   const fetchMessages = useCallback(async () => {
     if (!conversationId) return;
@@ -394,36 +399,56 @@ export default function ChatScreen() {
                       </Text>
                     )}
                     {item.file_url && item.file_type?.startsWith("image/") && (
-                      <ExpoImage
-                        source={{ uri: item.file_url }}
-                        style={{
-                          width: 220,
-                          height: 220,
-                          borderRadius: 12,
-                          marginTop: item.content ? 8 : 0,
-                        }}
-                        contentFit="cover"
-                      />
-                    )}
-                    {item.file_url && !item.file_type?.startsWith("image/") && (
                       <TouchableOpacity
-                        onPress={() =>
-                          item.file_url && Linking.openURL(item.file_url)
-                        }
+                        onPress={() => {
+                          setModalImageUrl(item.file_url);
+                          setImageModalVisible(true);
+                        }}
                       >
-                        <Text
+                        <ExpoImage
+                          source={{ uri: item.file_url }}
                           style={{
-                            color: isMine ? "#FDBA74" : "#F97316",
-                            fontSize: 13,
-                            marginTop: item.content ? 4 : 0,
-                            textDecorationLine: "underline",
+                            width: 220,
+                            height: 220,
+                            borderRadius: 12,
+                            marginTop: item.content ? 8 : 0,
                           }}
-                        >
-                          {item.file_type?.startsWith("video/") ? "▶ " : "📎 "}
-                          {item.file_name || "Attachment"}
-                        </Text>
+                          contentFit="cover"
+                        />
                       </TouchableOpacity>
                     )}
+                    {item.file_url && item.file_type?.startsWith("video/") && (
+                      <View style={{ marginTop: item.content ? 8 : 0 }}>
+                        <Video
+                          ref={videoRef}
+                          source={{ uri: item.file_url }}
+                          style={{ width: 280, height: 200, borderRadius: 12 }}
+                          useNativeControls
+                          resizeMode={ResizeMode.CONTAIN}
+                          isLooping={false}
+                        />
+                      </View>
+                    )}
+                    {item.file_url &&
+                      !item.file_type?.startsWith("image/") &&
+                      !item.file_type?.startsWith("video/") && (
+                        <TouchableOpacity
+                          onPress={() =>
+                            item.file_url && Linking.openURL(item.file_url)
+                          }
+                        >
+                          <Text
+                            style={{
+                              color: isMine ? "#FDBA74" : "#F97316",
+                              fontSize: 13,
+                              marginTop: item.content ? 4 : 0,
+                              textDecorationLine: "underline",
+                            }}
+                          >
+                            📎 {item.file_name || "Attachment"}
+                          </Text>
+                        </TouchableOpacity>
+                      )}
                   </View>
                   <Text
                     style={{
@@ -514,6 +539,41 @@ export default function ChatScreen() {
           </View>
         </KeyboardAvoidingView>
       )}
+
+      {/* Full-size image modal */}
+      <Modal
+        visible={imageModalVisible}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setImageModalVisible(false)}
+      >
+        <TouchableOpacity
+          style={{
+            flex: 1,
+            backgroundColor: "rgba(0,0,0,0.9)",
+            justifyContent: "center",
+            alignItems: "center",
+          }}
+          activeOpacity={1}
+          onPress={() => setImageModalVisible(false)}
+        >
+          <ExpoImage
+            source={{ uri: modalImageUrl || "" }}
+            style={{ width: "100%", height: "100%", resizeMode: "contain" }}
+            contentFit="contain"
+          />
+          <TouchableOpacity
+            style={{ position: "absolute", top: 50, right: 20, padding: 10 }}
+            onPress={() => setImageModalVisible(false)}
+          >
+            <Text
+              style={{ color: "#FFFFFF", fontSize: 30, fontWeight: "bold" }}
+            >
+              ✕
+            </Text>
+          </TouchableOpacity>
+        </TouchableOpacity>
+      </Modal>
     </>
   );
 }

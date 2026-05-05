@@ -29,7 +29,7 @@ export default function TabsLayout() {
   return (
     <Tabs
       screenOptions={{
-        headerStyle: { backgroundColor: "#1B2A4A" },
+        headerStyle: { backgroundColor: "#1B2A4A", height: 120 },
         headerTintColor: "#FFFFFF",
         headerTitleStyle: { fontWeight: "bold" },
         headerLeft: () => (

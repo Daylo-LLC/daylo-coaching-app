@@ -18,6 +18,7 @@ import DateTimePicker, {
 import { useAuthStore } from "../../src/store/auth";
 import { supabase } from "../../src/lib/supabase";
 import { Tables } from "../../src/types/database";
+import moment from "moment";
 
 type Availability = Tables<"availability">;
 
@@ -317,11 +318,11 @@ export default function AvailabilityScreen() {
                 <Text
                   style={{ fontSize: 16, fontWeight: "700", color: "#1B2A4A" }}
                 >
-                  Date: {item.date}
+                  Date: {moment(item.date).format("MMMM D, YYYY")}
                 </Text>
                 <Text style={{ fontSize: 13, color: "#6B7280", marginTop: 4 }}>
-                  Time: {convertTo12Hour(item.time_start)} –{" "}
-                  {convertTo12Hour(item.time_end)}
+                  Time: {moment(item.time_start, "HH:mm").format("h:mm A")} –{" "}
+                  {moment(item.time_end, "HH:mm").format("h:mm A")}
                 </Text>
               </View>
               <View
@@ -815,13 +816,23 @@ export default function AvailabilityScreen() {
               borderRadius: 8,
               padding: 14,
               fontSize: 16,
-              marginBottom: 16,
+              marginBottom: 4,
             }}
             placeholder="Memorial Stadium"
             placeholderTextColor="#9CA3AF"
             value={formVenue}
             onChangeText={setFormVenue}
           />
+          <Text
+            style={{
+              fontSize: 11,
+              color: "#9CA3AF",
+              marginBottom: 16,
+            }}
+          >
+            Leave blank if this is at your school — we'll use your school's
+            address by default.
+          </Text>
 
           <Text
             style={{

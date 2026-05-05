@@ -8,14 +8,16 @@ import {
   ActivityIndicator,
   Button,
   StyleSheet,
+  Pressable,
 } from "react-native";
 import { router } from "expo-router";
+import moment from "moment";
+
 import { useAuthStore } from "../../../src/store/auth";
 import { supabase } from "../../../src/lib/supabase";
 import { Tables } from "../../../src/types/database";
 import Header from "@/components/Header";
-import moment from "moment";
-import { navigate } from "expo-router/build/global-state/routing";
+import { Calendar } from "lucide-react-native";
 
 type Request = Tables<"requests"> & {
   requester_school?: {
@@ -41,7 +43,6 @@ export default function Home() {
   const { profile } = useAuthStore();
   const [upcomingGames, setUpcomingGames] = useState<Request[]>([]);
   const [pendingRequests, setPendingRequests] = useState<Request[]>([]);
-  const [openSlots, setOpenSlots] = useState<Availability[]>([]);
   const [school, setSchool] = useState<SchoolWithCoachSchools | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -84,7 +85,6 @@ export default function Home() {
         .eq("id", profile.school_id),
     ]);
 
-    setOpenSlots(slotsRes.data || []);
     setSchool(schoolRes.data?.[0] || null);
 
     // Collect all school IDs from both accepted games and pending requests
@@ -119,8 +119,6 @@ export default function Home() {
     setLoading(false);
   }, [profile]);
 
-  console.log("school", JSON.stringify(school, null, 2));
-
   useEffect(() => {
     fetchDashboard();
   }, [fetchDashboard]);
@@ -141,7 +139,7 @@ export default function Home() {
 
   return (
     <>
-      <Header title="DAYLO" />
+      <Header title="Daylo" />
       <ScrollView
         style={{ flex: 1 }}
         contentContainerStyle={{ padding: 16 }}
@@ -166,7 +164,9 @@ export default function Home() {
             </Text>
           </View>
           <View style={{ width: "30%" }}>
-            <Button color="#1B2A4A" title="Add Game" onPress={() => {router.push("/search")}} />
+            <Pressable style={styles.addButton } onPress={() => {router.push("/search")}}>
+              <Text style={styles.buttonText}>Add Game</Text>
+            </Pressable>
           </View>
         </View>
 
@@ -242,37 +242,50 @@ export default function Home() {
                         borderBottomWidth: 1,
                         borderBottomColor: "#F3F4F6",
                         paddingVertical: 10,
+                        flexDirection: "row",
+                        justifyContent: "flex-start",
+                        alignItems: "center",
+                        gap: 8,
                       }}
                     >
-                      <Text
-                        style={{
-                          fontSize: 14,
-                          fontWeight: "600",
-                          color: "#374151",
-                        }}
+                      <Calendar size={40} color="#F97316" />
+                      <TouchableOpacity
+                        onPress={() => router.push(`/request/${game.id}`)}
                       >
-                        {game.sport.charAt(0).toUpperCase() +
-                          game.sport.slice(1)}{" "}
-                        — {moment(game.date).format("MMM D, YYYY")}
-                      </Text>
-                      {opposingSchool && (
+                        <Text
+                          style={{
+                            fontSize: 14,
+                            fontWeight: "600",
+                            color: "#374151",
+                          }}
+                        >
+                          {game.sport.charAt(0).toUpperCase() +
+                            game.sport.slice(1)}{" "}
+                          — {moment(game.date).format("MMM D, YYYY")}
+                        </Text>
+                        {opposingSchool && (
+                          <Text
+                            style={{
+                              fontSize: 12,
+                              color: "#6B7280",
+                              marginTop: 2,
+                            }}
+                          >
+                            vs. {opposingSchool.name}
+                          </Text>
+                        )}
                         <Text
                           style={{
                             fontSize: 12,
-                            color: "#6B7280",
+                            color: "#9CA3AF",
                             marginTop: 2,
                           }}
                         >
-                          vs. {opposingSchool.name}
+                          {moment(game.time_start, "HH:mm").format("h:mm A")} –{" "}
+                          {moment(game.time_end, "HH:mm").format("h:mm A")} •{" "}
+                          {game.venue || "TBD"}
                         </Text>
-                      )}
-                      <Text
-                        style={{ fontSize: 12, color: "#9CA3AF", marginTop: 2 }}
-                      >
-                        {moment(game.time_start, "HH:mm").format("h:mm A")} –{" "}
-                        {moment(game.time_end, "HH:mm").format("h:mm A")} •{" "}
-                        {game.venue || "TBD"}
-                      </Text>
+                      </TouchableOpacity>
                     </View>
                   );
                 })
@@ -398,7 +411,14 @@ const styles = StyleSheet.create({
     paddingVertical: 15,
   },
   addButton: {
-    backgroundColor: "1B2A4A",
+    backgroundColor: "#1B2A4A",
+    padding: 10,
+    borderRadius: 8,
+  },
+  buttonText: {
+    color: "#FFFFFF",
+    fontWeight: "600",
+    textAlign: "center",
   },
   tabContainer: {
     flexDirection: "row",
@@ -406,6 +426,8 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     padding: 4,
     marginBottom: 16,
+    borderWidth: 2,
+    borderColor: "#dbe2ef",
   },
   tab: {
     flex: 1,
@@ -415,7 +437,7 @@ const styles = StyleSheet.create({
     alignItems: "center",
   },
   activeTab: {
-    backgroundColor: "#FFFFFF",
+    backgroundColor: "#F97316",
     shadowColor: "#000",
     shadowOpacity: 0.1,
     shadowRadius: 4,
@@ -427,6 +449,6 @@ const styles = StyleSheet.create({
     color: "#6B7280",
   },
   activeTabText: {
-    color: "#1B2A4A",
+    color: "#fff",
   },
 });

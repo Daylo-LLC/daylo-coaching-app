@@ -10,7 +10,7 @@ import {
   Image,
   StyleSheet,
 } from "react-native";
-import { Menu } from "lucide-react-native";
+import { Menu, Trash2 } from "lucide-react-native";
 import { DrawerActions, useNavigation } from "@react-navigation/native";
 import { useRouter } from "expo-router";
 import { useAuthStore } from "../../src/store/auth";
@@ -73,10 +73,99 @@ export default function ProfileScreen() {
       quality: 0.5,
     });
 
-    if (!result.canceled) {
-      // TODO: Upload to Supabase storage
-      setFormData({ ...formData, avatar_url: result.assets[0].uri });
+    if (!result.canceled && result.assets[0]) {
+      try {
+        setLoading(true);
+        const asset = result.assets[0];
+
+        // Generate a unique filename
+        const fileExt = asset.uri.split(".").pop();
+        const fileName = `${profile?.id}/${Date.now()}.${fileExt}`;
+        const filePath = `avatars/${fileName}`;
+
+        // Upload to Supabase storage
+        const uploadFormData = new FormData();
+        uploadFormData.append("file", {
+          uri: asset.uri,
+          type: asset.mimeType || `image/${fileExt}`,
+          name: fileName,
+        } as any);
+
+        const { data: uploadData, error: uploadError } = await supabase.storage
+          .from("avatars")
+          .upload(filePath, uploadFormData);
+
+        if (uploadError) {
+          throw uploadError;
+        }
+
+        // Get the public URL
+        const {
+          data: { publicUrl },
+        } = supabase.storage.from("avatars").getPublicUrl(filePath);
+
+        setFormData({ ...formData, avatar_url: publicUrl });
+      } catch (error) {
+        console.error("Error uploading image:", error);
+        Alert.alert("Error", "Failed to upload image");
+      } finally {
+        setLoading(false);
+      }
     }
+  };
+
+  const handleDeleteAccount = async () => {
+    Alert.alert(
+      "Delete Account",
+      "Are you sure you want to delete your account? This action cannot be undone and all your data will be permanently deleted.",
+      [
+        { text: "Cancel", style: "cancel" },
+        {
+          text: "Delete",
+          style: "destructive",
+          onPress: async () => {
+            if (!profile) return;
+
+            setLoading(true);
+            try {
+              // Delete user's avatar from storage if it exists
+              if (profile.avatar_url) {
+                const fileName = profile.avatar_url.split("/").pop();
+                if (fileName) {
+                  await supabase.storage
+                    .from("avatars")
+                    .remove([`avatars/${profile.id}/${fileName}`]);
+                }
+              }
+
+              // Delete profile row + auth user via Edge Function (service role)
+              const { data, error: authError } =
+                await supabase.functions.invoke("delete-account");
+
+              if (authError) {
+                console.error("delete-account function error:", authError);
+                throw authError;
+              }
+              if (data?.error) {
+                throw new Error(data.error);
+              }
+
+              // Sign out and navigate to auth
+              await signOut();
+              router.replace("/(auth)/sign-in");
+              Alert.alert("Success", "Your account has been deleted");
+            } catch (error) {
+              const message =
+                error instanceof Error ? error.message : String(error);
+              console.error("Error deleting account:", error);
+              Alert.alert("Error", `Failed to delete account: ${message}`);
+            } finally {
+              setLoading(false);
+            }
+          },
+        },
+      ],
+    );
   };
 
   function MenuButton() {
@@ -269,6 +358,27 @@ export default function ProfileScreen() {
                 Save Changes
               </Text>
             )}
+          </TouchableOpacity>
+
+          {/* Delete Account Button */}
+          <TouchableOpacity
+            onPress={handleDeleteAccount}
+            disabled={loading}
+            style={{
+              backgroundColor: "#FEE2E2",
+              borderRadius: 8,
+              padding: 16,
+              alignItems: "center",
+              marginTop: 16,
+              flexDirection: "row",
+              justifyContent: "center",
+              gap: 8,
+            }}
+          >
+            <Trash2 size={20} color="#EF4444" />
+            <Text style={{ color: "#EF4444", fontSize: 16, fontWeight: "600" }}>
+              Delete Account
+            </Text>
           </TouchableOpacity>
         </View>
       </ScrollView>

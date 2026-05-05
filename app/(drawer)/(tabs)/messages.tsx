@@ -1,4 +1,4 @@
-import { useEffect, useState, useCallback } from "react";
+import { useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -7,7 +7,7 @@ import {
   ActivityIndicator,
   RefreshControl,
 } from "react-native";
-import { router } from "expo-router";
+import { router, useFocusEffect } from "expo-router";
 import { useAuthStore } from "../../../src/store/auth";
 import { supabase } from "../../../src/lib/supabase";
 
@@ -118,9 +118,11 @@ export default function MessagesScreen() {
     setLoading(false);
   }, [profile]);
 
-  useEffect(() => {
-    fetchConversations();
-  }, [fetchConversations]);
+  useFocusEffect(
+    useCallback(() => {
+      fetchConversations();
+    }, [fetchConversations]),
+  );
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);

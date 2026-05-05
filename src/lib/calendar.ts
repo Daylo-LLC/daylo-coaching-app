@@ -9,16 +9,23 @@ interface GameEvent {
   venue?: string | null;
   sport: string;
   notes?: string;
+  opponentSchool?: string | null;
+  url?: string;
 }
 
 async function getOrCreateCalendar(): Promise<string | null> {
   const { status } = await Calendar.requestCalendarPermissionsAsync();
   if (status !== "granted") {
-    Alert.alert("Permission Denied", "Calendar access is needed to export games.");
+    Alert.alert(
+      "Permission Denied",
+      "Calendar access is needed to export games.",
+    );
     return null;
   }
 
-  const calendars = await Calendar.getCalendarsAsync(Calendar.EntityTypes.EVENT);
+  const calendars = await Calendar.getCalendarsAsync(
+    Calendar.EntityTypes.EVENT,
+  );
 
   const dayloCalendar = calendars.find((c) => c.title === "Daylo Games");
   if (dayloCalendar) return dayloCalendar.id;
@@ -38,9 +45,10 @@ async function getOrCreateCalendar(): Promise<string | null> {
     return newId;
   } else {
     const sources = calendars.filter(
-      (c) => c.source?.isLocalAccount || c.source?.name === "Default"
+      (c) => c.source?.isLocalAccount || c.source?.name === "Default",
     );
-    const source = sources.length > 0 ? sources[0].source : calendars[0]?.source;
+    const source =
+      sources.length > 0 ? sources[0].source : calendars[0]?.source;
     if (!source) return null;
 
     const newId = await Calendar.createCalendarAsync({
@@ -57,10 +65,10 @@ async function getOrCreateCalendar(): Promise<string | null> {
 }
 
 function parseDateTime(date: string, time: string): Date {
+  // Parse date as local time to avoid UTC shifting it to the previous day
+  const [year, month, day] = date.split("-").map(Number);
   const [hours, minutes] = time.split(":").map(Number);
-  const d = new Date(date);
-  d.setHours(hours, minutes, 0, 0);
-  return d;
+  return new Date(year, month - 1, day, hours, minutes, 0, 0);
 }
 
 export async function exportGameToCalendar(game: GameEvent): Promise<boolean> {
@@ -71,17 +79,26 @@ export async function exportGameToCalendar(game: GameEvent): Promise<boolean> {
     const startDate = parseDateTime(game.date, game.timeStart);
     const endDate = parseDateTime(game.date, game.timeEnd);
 
+    const sportLabel = game.sport.charAt(0).toUpperCase() + game.sport.slice(1);
+    const title = game.opponentSchool
+      ? `${sportLabel} vs. ${game.opponentSchool}`
+      : `${sportLabel} Game — ${game.title}`;
+
     await Calendar.createEventAsync(calendarId, {
-      title: `${game.sport.charAt(0).toUpperCase() + game.sport.slice(1)} Game — ${game.title}`,
+      title,
       startDate,
       endDate,
       location: game.venue || undefined,
       notes: game.notes || `Daylo scheduled game`,
       timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       alarms: [{ relativeOffset: -60 }, { relativeOffset: -1440 }],
+      url: game.url,
     });
 
-    Alert.alert("Exported", "Game has been added to your Daylo Games calendar.");
+    Alert.alert(
+      "Exported",
+      "Game has been added to your Daylo Games calendar.",
+    );
     return true;
   } catch (error) {
     console.error("Calendar export error:", error);
@@ -100,14 +117,21 @@ export async function exportMultipleGames(games: GameEvent[]): Promise<number> {
       const startDate = parseDateTime(game.date, game.timeStart);
       const endDate = parseDateTime(game.date, game.timeEnd);
 
+      const sportLabel =
+        game.sport.charAt(0).toUpperCase() + game.sport.slice(1);
+      const title = game.opponentSchool
+        ? `${sportLabel} vs. ${game.opponentSchool}`
+        : `${sportLabel} Game — ${game.title}`;
+
       await Calendar.createEventAsync(calendarId, {
-        title: `${game.sport.charAt(0).toUpperCase() + game.sport.slice(1)} Game — ${game.title}`,
+        title,
         startDate,
         endDate,
         location: game.venue || undefined,
         notes: game.notes || `Daylo scheduled game`,
         timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
         alarms: [{ relativeOffset: -60 }, { relativeOffset: -1440 }],
+        url: game.url,
       });
       count++;
     } catch (error) {
@@ -115,6 +139,9 @@ export async function exportMultipleGames(games: GameEvent[]): Promise<number> {
     }
   }
 
-  Alert.alert("Exported", `${count} game${count !== 1 ? "s" : ""} added to your calendar.`);
+  Alert.alert(
+    "Exported",
+    `${count} game${count !== 1 ? "s" : ""} added to your calendar.`,
+  );
   return count;
 }
