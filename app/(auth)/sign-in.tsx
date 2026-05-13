@@ -64,11 +64,11 @@ export default function SignIn() {
         <View style={{ alignItems: "center", marginBottom: 48 }}>
           <Image
             source={require("../../assets/logo.png")}
-            style={{ width: 170, height: 170 }}
+            style={{ width: 280, height: 280 }}
           />
-          <Text style={{ fontSize: 16, color: "#6B7280", marginTop: 8 }}>
+          {/* <Text style={{ fontSize: 16, color: "#6B7280", marginTop: 8 }}>
             Schedule games with ease
-          </Text>
+          </Text> */}
         </View>
 
         {error && (

@@ -10,6 +10,7 @@ import {
   Platform,
   Alert,
   Modal,
+  ActionSheetIOS,
 } from "react-native";
 import { useLocalSearchParams, Stack, router } from "expo-router";
 import * as ImagePicker from "expo-image-picker";
@@ -21,6 +22,7 @@ import {
   Paperclip,
   Image as ImageIcon,
   Video as VideoIcon,
+  Flag,
 } from "lucide-react-native";
 import { Image as ExpoImage } from "expo-image";
 import { Video, ResizeMode } from "expo-av";
@@ -60,6 +62,8 @@ export default function ChatScreen() {
   const flatListRef = useRef<FlatList>(null);
   const [imageModalVisible, setImageModalVisible] = useState(false);
   const [modalImageUrl, setModalImageUrl] = useState<string | null>(null);
+  const [reportModalVisible, setReportModalVisible] = useState(false);
+  const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
   const videoRef = useRef<Video>(null);
 
   const fetchMessages = useCallback(async () => {
@@ -309,6 +313,79 @@ export default function ChatScreen() {
     return d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
   };
 
+  const handleLongPressMessage = (message: Message) => {
+    // Don't allow reporting your own messages
+    if (message.sender_id === profile?.id) return;
+
+    const options = ["Report Message", "Cancel"];
+    const destructiveButtonIndex = 0;
+    const cancelButtonIndex = 1;
+
+    if (Platform.OS === "ios") {
+      ActionSheetIOS.showActionSheetWithOptions(
+        {
+          options,
+          destructiveButtonIndex,
+          cancelButtonIndex,
+        },
+        (buttonIndex) => {
+          if (buttonIndex === 0) {
+            setSelectedMessage(message);
+            setReportModalVisible(true);
+          }
+        },
+      );
+    } else {
+      // Android - use Alert for now, or implement a custom action sheet
+      Alert.alert("Message Options", "What would you like to do?", [
+        {
+          text: "Report Message",
+          style: "destructive",
+          onPress: () => {
+            setSelectedMessage(message);
+            setReportModalVisible(true);
+          },
+        },
+        {
+          text: "Cancel",
+          style: "cancel",
+        },
+      ]);
+    }
+  };
+
+  const handleReport = async (reason: string) => {
+    if (!profile || !selectedMessage) return;
+
+    const { error } = await supabase.from("reports").insert({
+      reporter_id: profile.id,
+      reported_user_id: selectedMessage.sender_id,
+      reported_message_id: selectedMessage.id,
+      reason: reason,
+      status: "open",
+    });
+
+    setReportModalVisible(false);
+    setSelectedMessage(null);
+
+    if (error) {
+      Alert.alert("Error", "Failed to submit report. Please try again.");
+    } else {
+      Alert.alert(
+        "Report Submitted",
+        "Thank you for helping keep Daylo safe. Our team will review this report.",
+      );
+    }
+  };
+
+  const reportReasons = [
+    "Harassment or bullying",
+    "Spam",
+    "Inappropriate content",
+    "Impersonation",
+    "Other",
+  ];
+
   // if (loading) {
   //   return (
   //     <View style={{ flex: 1, justifyContent: "center", alignItems: "center" }}>
@@ -354,7 +431,9 @@ export default function ChatScreen() {
             renderItem={({ item }) => {
               const isMine = item.sender_id === profile?.id;
               return (
-                <View
+                <TouchableOpacity
+                  onLongPress={() => handleLongPressMessage(item)}
+                  activeOpacity={1}
                   style={{
                     alignSelf: isMine ? "flex-end" : "flex-start",
                     maxWidth: "80%",
@@ -461,7 +540,7 @@ export default function ChatScreen() {
                   >
                     {formatTime(item.created_at)}
                   </Text>
-                </View>
+                </TouchableOpacity>
               );
             }}
           />
@@ -573,6 +652,94 @@ export default function ChatScreen() {
             </Text>
           </TouchableOpacity>
         </TouchableOpacity>
+      </Modal>
+
+      {/* Report Modal */}
+      <Modal
+        visible={reportModalVisible}
+        transparent={true}
+        animationType="slide"
+        onRequestClose={() => {
+          setReportModalVisible(false);
+          setSelectedMessage(null);
+        }}
+      >
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: "rgba(0,0,0,0.5)",
+            justifyContent: "flex-end",
+          }}
+        >
+          <View
+            style={{
+              backgroundColor: "#FFFFFF",
+              borderTopLeftRadius: 20,
+              borderTopRightRadius: 20,
+              padding: 20,
+              maxHeight: "80%",
+            }}
+          >
+            <View
+              style={{
+                flexDirection: "row",
+                justifyContent: "space-between",
+                alignItems: "center",
+                marginBottom: 20,
+              }}
+            >
+              <Text
+                style={{ fontSize: 18, fontWeight: "700", color: "#1B2A4A" }}
+              >
+                Report Message
+              </Text>
+              <TouchableOpacity
+                onPress={() => {
+                  setReportModalVisible(false);
+                  setSelectedMessage(null);
+                }}
+              >
+                <Text style={{ fontSize: 24, color: "#6B7280" }}>✕</Text>
+              </TouchableOpacity>
+            </View>
+
+            <Text style={{ fontSize: 14, color: "#6B7280", marginBottom: 16 }}>
+              Why are you reporting this message?
+            </Text>
+
+            {reportReasons.map((reason) => (
+              <TouchableOpacity
+                key={reason}
+                onPress={() => handleReport(reason)}
+                style={{
+                  paddingVertical: 16,
+                  borderBottomWidth: 1,
+                  borderBottomColor: "#E5E7EB",
+                }}
+              >
+                <Text style={{ fontSize: 16, color: "#374151" }}>{reason}</Text>
+              </TouchableOpacity>
+            ))}
+
+            <TouchableOpacity
+              onPress={() => {
+                setReportModalVisible(false);
+                setSelectedMessage(null);
+              }}
+              style={{
+                marginTop: 20,
+                paddingVertical: 16,
+                alignItems: "center",
+              }}
+            >
+              <Text
+                style={{ fontSize: 16, color: "#6B7280", fontWeight: "600" }}
+              >
+                Cancel
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
       </Modal>
     </>
   );

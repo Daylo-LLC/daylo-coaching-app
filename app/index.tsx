@@ -25,11 +25,27 @@ export default function Index() {
     return <Redirect href="/(auth)/sign-in" />;
   }
 
-  if (profile && profile.approval_status === "pending") {
+  // Session exists but profile not loaded yet — wait instead of falling through to home
+  if (!profile) {
+    return (
+      <View
+        style={{
+          flex: 1,
+          justifyContent: "center",
+          alignItems: "center",
+          backgroundColor: "#1B2A4A",
+        }}
+      >
+        <ActivityIndicator size="large" color="#F97316" />
+      </View>
+    );
+  }
+
+  if (profile.approval_status === "pending") {
     return <Redirect href="/pending" />;
   }
 
-  if (profile && !profile.first_name) {
+  if (!profile.first_name) {
     return <Redirect href="/onboarding" />;
   }
 

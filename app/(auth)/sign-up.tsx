@@ -23,13 +23,29 @@ export default function SignUp() {
     id: string;
     name: string;
   } | null>(null);
+  const [selectedSport, setSelectedSport] = useState<
+    "football" | "soccer" | null
+  >(null);
+  const [selectedDivision, setSelectedDivision] = useState<string | null>(null);
+  const [sportDropdownOpen, setSportDropdownOpen] = useState(false);
+  const [divisionDropdownOpen, setDivisionDropdownOpen] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [loading, setLoading] = useState(false);
   const signUp = useAuthStore((s) => s.signUp);
 
   const handleSignUp = async () => {
-    if (!firstName || !lastName || !email || !password || !selectedSchool) {
-      setError("Please fill in all fields, including your school.");
+    if (
+      !firstName ||
+      !lastName ||
+      !email ||
+      !password ||
+      !selectedSchool ||
+      !selectedSport ||
+      !selectedDivision
+    ) {
+      setError(
+        "Please fill in all fields, including your school, sport, and division.",
+      );
       return;
     }
     if (password !== confirmPassword) {
@@ -48,6 +64,8 @@ export default function SignUp() {
       firstName.trim(),
       lastName.trim(),
       selectedSchool.id,
+      selectedSport,
+      selectedDivision,
     );
     setLoading(false);
     if (result.error) {
@@ -190,6 +208,179 @@ export default function SignUp() {
           onSelect={setSelectedSchool}
           selectedSchool={selectedSchool}
         />
+
+        <View
+          style={{
+            flexDirection: "row",
+            gap: 12,
+            marginBottom: 16,
+          }}
+        >
+          <View style={{ flex: 1 }}>
+            <Text
+              style={{
+                fontSize: 14,
+                fontWeight: "600",
+                color: "#374151",
+                marginBottom: 6,
+              }}
+            >
+              Sport
+            </Text>
+            <TouchableOpacity
+              onPress={() => setSportDropdownOpen(!sportDropdownOpen)}
+              style={{
+                backgroundColor: "#FFFFFF",
+                borderWidth: 1,
+                borderColor: "#D1D5DB",
+                borderRadius: 8,
+                padding: 14,
+                flexDirection: "row",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
+              <Text
+                style={{
+                  color: selectedSport ? "#374151" : "#9CA3AF",
+                  fontSize: 16,
+                  textTransform: "capitalize",
+                }}
+              >
+                {selectedSport || "Select sport"}
+              </Text>
+              <Text style={{ color: "#6B7280", fontSize: 16 }}>▼</Text>
+            </TouchableOpacity>
+            {sportDropdownOpen && (
+              <View
+                style={{
+                  backgroundColor: "#FFFFFF",
+                  borderWidth: 1,
+                  borderColor: "#D1D5DB",
+                  borderRadius: 8,
+                  marginTop: 4,
+                  elevation: 3,
+                  shadowColor: "#000",
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.1,
+                  shadowRadius: 4,
+                }}
+              >
+                {(["football", "soccer"] as const).map((sport) => (
+                  <TouchableOpacity
+                    key={sport}
+                    onPress={() => {
+                      setSelectedSport(sport);
+                      setSportDropdownOpen(false);
+                    }}
+                    style={{
+                      padding: 14,
+                      borderBottomWidth: sport === "football" ? 1 : 0,
+                      borderBottomColor: "#E5E7EB",
+                    }}
+                  >
+                    <Text
+                      style={{
+                        color: "#374151",
+                        fontSize: 16,
+                        textTransform: "capitalize",
+                      }}
+                    >
+                      {sport}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+          </View>
+
+          <View style={{ flex: 1 }}>
+            <Text
+              style={{
+                fontSize: 14,
+                fontWeight: "600",
+                color: "#374151",
+                marginBottom: 6,
+              }}
+            >
+              Classification
+            </Text>
+            <TouchableOpacity
+              onPress={() => setDivisionDropdownOpen(!divisionDropdownOpen)}
+              style={{
+                backgroundColor: "#FFFFFF",
+                borderWidth: 1,
+                borderColor: "#D1D5DB",
+                borderRadius: 8,
+                padding: 14,
+                flexDirection: "row",
+                justifyContent: "space-between",
+                alignItems: "center",
+              }}
+            >
+              <Text
+                style={{
+                  color: selectedDivision ? "#374151" : "#9CA3AF",
+                  fontSize: 16,
+                }}
+              >
+                {selectedDivision || "Select division"}
+              </Text>
+              <Text style={{ color: "#6B7280", fontSize: 16 }}>▼</Text>
+            </TouchableOpacity>
+            {divisionDropdownOpen && (
+              <View
+                style={{
+                  backgroundColor: "#FFFFFF",
+                  borderWidth: 1,
+                  borderColor: "#D1D5DB",
+                  borderRadius: 8,
+                  marginTop: 4,
+                  elevation: 3,
+                  shadowColor: "#000",
+                  shadowOffset: { width: 0, height: 2 },
+                  shadowOpacity: 0.1,
+                  shadowRadius: 4,
+                }}
+              >
+                {(
+                  [
+                    "A-Public",
+                    "A-Private",
+                    "2A",
+                    "3A",
+                    "4A",
+                    "5A",
+                    "6A",
+                    "7A",
+                  ] as const
+                ).map((division) => (
+                  <TouchableOpacity
+                    key={division}
+                    onPress={() => {
+                      setSelectedDivision(division);
+                      setDivisionDropdownOpen(false);
+                    }}
+                    style={{
+                      padding: 14,
+                      borderBottomWidth: division !== "7A" ? 1 : 0,
+                      borderBottomColor: "#E5E7EB",
+                    }}
+                  >
+                    <Text
+                      style={{
+                        color: "#374151",
+                        fontSize: 16,
+                      }}
+                    >
+                      {division}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            )}
+          </View>
+        </View>
 
         <Text
           style={{

@@ -5,7 +5,7 @@ import {
   TextInput,
   TouchableOpacity,
   ActivityIndicator,
-  FlatList,
+  ScrollView,
   StyleSheet,
 } from "react-native";
 import { supabase } from "../lib/supabase";
@@ -43,9 +43,7 @@ export default function SchoolSearch({
     const { data, error } = await supabase
       .from("schools")
       .select("id, name, city, district")
-      .or(
-        `name.ilike.%${text}%,city.ilike.%${text}%,district.ilike.%${text}%`
-      )
+      .or(`name.ilike.%${text}%,city.ilike.%${text}%,district.ilike.%${text}%`)
       .order("name", { ascending: true })
       .limit(20);
 
@@ -88,10 +86,7 @@ export default function SchoolSearch({
       <Text style={styles.label}>School</Text>
       <View style={styles.inputRow}>
         <TextInput
-          style={[
-            styles.input,
-            selectedSchool ? styles.inputSelected : null,
-          ]}
+          style={[styles.input, selectedSchool ? styles.inputSelected : null]}
           placeholder="Search by school name, city, or district..."
           placeholderTextColor="#9CA3AF"
           value={query}
@@ -117,14 +112,14 @@ export default function SchoolSearch({
       )}
       {showDropdown && !selectedSchool && results.length > 0 && (
         <View style={styles.dropdown}>
-          <FlatList
-            data={results}
-            keyExtractor={(item) => item.id}
+          <ScrollView
             keyboardShouldPersistTaps="handled"
             nestedScrollEnabled
             style={{ maxHeight: 200 }}
-            renderItem={({ item }) => (
+          >
+            {results.map((item) => (
               <TouchableOpacity
+                key={item.id}
                 onPress={() => handleSelect(item)}
                 style={styles.dropdownItem}
               >
@@ -133,15 +128,19 @@ export default function SchoolSearch({
                   {[item.city, item.district].filter(Boolean).join(" • ")}
                 </Text>
               </TouchableOpacity>
-            )}
-          />
+            ))}
+          </ScrollView>
         </View>
       )}
-      {showDropdown && !selectedSchool && !loading && results.length === 0 && query.length >= 4 && (
-        <View style={styles.dropdown}>
-          <Text style={styles.noResults}>No schools found</Text>
-        </View>
-      )}
+      {showDropdown &&
+        !selectedSchool &&
+        !loading &&
+        results.length === 0 &&
+        query.length >= 4 && (
+          <View style={styles.dropdown}>
+            <Text style={styles.noResults}>No schools found</Text>
+          </View>
+        )}
       {!selectedSchool && query.length > 0 && query.length < 4 && (
         <Text style={styles.hint}>Type at least 4 characters to search</Text>
       )}

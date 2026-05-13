@@ -17,7 +17,7 @@ import { supabase } from "../../src/lib/supabase";
 export default function VerifyEmailScreen() {
   const router = useRouter();
   const { email } = useLocalSearchParams<{ email: string }>();
-  const { profile } = useAuthStore();
+  const { profile, fetchProfile } = useAuthStore();
   const [code, setCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [resending, setResending] = useState(false);
@@ -50,7 +50,7 @@ export default function VerifyEmailScreen() {
         Alert.alert("Error", error.message);
       } else {
         // Success - user will be automatically signed in
-        Alert.alert("Success", "Email verified successfully!");
+        await fetchProfile();
         router.replace("/");
       }
     } catch (err) {
