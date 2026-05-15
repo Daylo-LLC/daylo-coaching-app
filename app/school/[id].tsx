@@ -85,6 +85,7 @@ export default function SchoolDetail() {
           .select("*")
           .eq("school_id", id)
           .eq("is_booked", false)
+          .filter("date", "gte", moment().format("YYYY-MM-DD"))
           .order("date", { ascending: true });
 
         setSlots(slotsData || []);
@@ -161,7 +162,11 @@ export default function SchoolDetail() {
         time_start: selectedSlot.time_start,
         time_end: selectedSlot.time_end,
         sport: selectedSlot.sport,
-        home_away: selectedSlot.home_away_preference || "either",
+        gender: (selectedSlot as any).gender || "boys",
+        home_away:
+          selectedSlot.home_away_preference === "either"
+            ? "neutral"
+            : selectedSlot.home_away_preference || "neutral",
         venue: finalVenue || null,
         status: "pending",
       });
@@ -365,7 +370,7 @@ export default function SchoolDetail() {
             ) : (
               coaches.map((coach) => (
                 <View
-                  key={coach.coach_id}
+                  key={`${coach.coach_id}-${coach.sport}`}
                   style={{
                     flexDirection: "row",
                     justifyContent: "space-between",

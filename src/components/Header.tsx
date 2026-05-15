@@ -14,6 +14,8 @@ const Header = ({ title }: { title: string }) => {
   const navigation = useNavigation();
 
   return (
+    <>
+    <StatusBar barStyle="light-content" backgroundColor="#1b2a4a" />
     <View style={styles.header}>
       <TouchableOpacity onPress={() => navigation.dispatch(DrawerActions.openDrawer())}>
         <MenuIcon color="white" />
@@ -21,6 +23,7 @@ const Header = ({ title }: { title: string }) => {
       <Text style={styles.headerTitle}>{title}</Text>
       <View style={{ width: 24 }} />
     </View>
+    </>
   );
 };
 

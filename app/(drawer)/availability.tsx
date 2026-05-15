@@ -19,10 +19,15 @@ import { useAuthStore } from "../../src/store/auth";
 import { supabase } from "../../src/lib/supabase";
 import { Tables } from "../../src/types/database";
 import moment from "moment";
+import { useFocusEffect } from "expo-router";
 
 type Availability = Tables<"availability">;
 
 const SPORTS = ["football", "soccer"] as const;
+const GENDERS = ["boys", "girls", "coed"] as const;
+type Gender = (typeof GENDERS)[number];
+const genderLabel = (g: string) =>
+  g === "coed" ? "Coed" : g.charAt(0).toUpperCase() + g.slice(1);
 const PREFERENCES = ["home", "away", "either"] as const;
 
 export default function AvailabilityScreen() {
@@ -41,12 +46,13 @@ export default function AvailabilityScreen() {
   const [formPreference, setFormPreference] = useState<string>("home");
   const [formVenue, setFormVenue] = useState("");
   const [formDistance, setFormDistance] = useState("");
-  const [formSchoolId, setFormSchoolId] = useState("");
+  const [formGender, setFormGender] = useState<Gender>("boys");
   const [coachSchools, setCoachSchools] = useState<
     Array<{
       id: string;
       school_id: string;
       sport: string;
+      gender: string;
       schools: { name: string } | null;
     }>
   >([]);
@@ -78,7 +84,7 @@ export default function AvailabilityScreen() {
     if (!profile) return;
     const { data } = await supabase
       .from("coach_schools")
-      .select("id, school_id, sport, schools(name)")
+      .select("id, school_id, sport, gender, schools(name)")
       .eq("coach_id", profile.id);
     setCoachSchools((data as any) || []);
   }, [profile]);
@@ -87,6 +93,25 @@ export default function AvailabilityScreen() {
     fetchSlots();
     fetchCoachSchools();
   }, [fetchSlots, fetchCoachSchools]);
+
+  useFocusEffect(
+    useCallback(() => {
+      fetchCoachSchools();
+    }, [fetchCoachSchools]),
+  );
+
+  // Auto-select first team if current sport+gender combo doesn't exist
+  useEffect(() => {
+    if (coachSchools.length === 0) return;
+    const matches = coachSchools.some(
+      (cs) => cs.sport === formSport && cs.gender === formGender,
+    );
+    if (!matches) {
+      const first = coachSchools[0];
+      setFormSport(first.sport);
+      setFormGender(first.gender as Gender);
+    }
+  }, [coachSchools, formSport, formGender]);
 
   const onRefresh = useCallback(async () => {
     setRefreshing(true);
@@ -113,18 +138,19 @@ export default function AvailabilityScreen() {
   };
 
   const handleSubmit = async () => {
-    if (!profile || !formSchoolId || !formDate || !formTimeStart) {
+    if (!profile || !profile.school_id || !formDate || !formTimeStart) {
       Alert.alert(
         "Error",
-        "Please fill in all required fields (school, date, start time).",
+        "Please fill in all required fields (date, start time).",
       );
       return;
     }
     setSubmitting(true);
     const data: any = {
       coach_id: profile.id,
-      school_id: formSchoolId,
+      school_id: profile.school_id,
       sport: formSport,
+      gender: formGender,
       date: formDate,
       time_start: convertTo24Hour(formTimeStart),
       home_away_preference: formPreference,
@@ -154,7 +180,7 @@ export default function AvailabilityScreen() {
   const openEditModal = (slot: Availability) => {
     setEditingId(slot.id);
     setFormSport(slot.sport);
-    setFormSchoolId(slot.school_id);
+    setFormGender(((slot as any).gender as Gender) || "boys");
     setFormDate(slot.date);
     setFormTimeStart(convertTo12Hour(slot.time_start));
     setFormTimeEnd(slot.time_end ? convertTo12Hour(slot.time_end) : "");
@@ -183,7 +209,7 @@ export default function AvailabilityScreen() {
 
   const resetForm = () => {
     setFormSport("football");
-    setFormSchoolId("");
+    setFormGender("boys");
     setFormDate("");
     setFormTimeStart("");
     setFormTimeEnd("");
@@ -363,6 +389,20 @@ export default function AvailabilityScreen() {
               </View>
               <View
                 style={{
+                  backgroundColor: "#F3E8FF",
+                  paddingHorizontal: 10,
+                  paddingVertical: 4,
+                  borderRadius: 12,
+                }}
+              >
+                <Text
+                  style={{ fontSize: 11, color: "#7C3AED", fontWeight: "600" }}
+                >
+                  {genderLabel((item as any).gender || "boys")}
+                </Text>
+              </View>
+              <View
+                style={{
                   backgroundColor: "#FFF7ED",
                   paddingHorizontal: 10,
                   paddingVertical: 4,
@@ -495,84 +535,53 @@ export default function AvailabilityScreen() {
               marginBottom: 6,
             }}
           >
-            Sport *
+            Team *
           </Text>
-          <View style={{ flexDirection: "row", gap: 8, marginBottom: 16 }}>
-            {SPORTS.map((s) => (
-              <TouchableOpacity
-                key={s}
-                onPress={() => setFormSport(s)}
-                style={{
-                  paddingHorizontal: 16,
-                  paddingVertical: 10,
-                  borderRadius: 8,
-                  backgroundColor: formSport === s ? "#1B2A4A" : "#F3F4F6",
-                  flex: 1,
-                  alignItems: "center",
-                }}
-              >
-                <Text
-                  style={{
-                    color: formSport === s ? "#FFFFFF" : "#374151",
-                    fontWeight: "600",
-                  }}
-                >
-                  {s.charAt(0).toUpperCase() + s.slice(1)}
-                </Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          <Text
-            style={{
-              fontSize: 14,
-              fontWeight: "600",
-              color: "#374151",
-              marginBottom: 6,
-            }}
-          >
-            School *
-          </Text>
-          <View
-            style={{
-              flexDirection: "row",
-              gap: 8,
-              marginBottom: 16,
-              flexWrap: "wrap",
-            }}
-          >
-            {coachSchools
-              .filter((cs) => cs.sport === formSport)
-              .map((cs) => (
-                <TouchableOpacity
-                  key={cs.id}
-                  onPress={() => setFormSchoolId(cs.school_id)}
-                  style={{
-                    paddingHorizontal: 16,
-                    paddingVertical: 10,
-                    borderRadius: 8,
-                    backgroundColor:
-                      formSchoolId === cs.school_id ? "#1B2A4A" : "#F3F4F6",
-                  }}
-                >
-                  <Text
+          {coachSchools.length === 0 ? (
+            <Text style={{ color: "#EF4444", fontSize: 13, marginBottom: 16 }}>
+              You haven't added any teams yet. Add one in Manage School first.
+            </Text>
+          ) : (
+            <View
+              style={{
+                flexDirection: "row",
+                gap: 8,
+                marginBottom: 16,
+                flexWrap: "wrap",
+              }}
+            >
+              {coachSchools.map((cs) => {
+                const selected =
+                  cs.sport === formSport && cs.gender === formGender;
+                return (
+                  <TouchableOpacity
+                    key={cs.id}
+                    onPress={() => {
+                      setFormSport(cs.sport);
+                      setFormGender(cs.gender as Gender);
+                    }}
                     style={{
-                      color:
-                        formSchoolId === cs.school_id ? "#FFFFFF" : "#374151",
-                      fontWeight: "600",
+                      paddingHorizontal: 16,
+                      paddingVertical: 10,
+                      borderRadius: 8,
+                      backgroundColor: selected ? "#1B2A4A" : "#F3F4F6",
                     }}
                   >
-                    {cs.schools?.name || "Unknown"}
-                  </Text>
-                </TouchableOpacity>
-              ))}
-            {coachSchools.filter((cs) => cs.sport === formSport).length ===
-              0 && (
-              <Text style={{ color: "#9CA3AF", fontSize: 14 }}>
-                No schools linked for this sport. Add one in your profile.
-              </Text>
-            )}
-          </View>
+                    <Text
+                      style={{
+                        color: selected ? "#FFFFFF" : "#374151",
+                        fontWeight: "600",
+                      }}
+                    >
+                      {cs.sport.charAt(0).toUpperCase() + cs.sport.slice(1)}
+                      {" \u00B7 "}
+                      {genderLabel(cs.gender)}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+          )}
 
           <Text
             style={{

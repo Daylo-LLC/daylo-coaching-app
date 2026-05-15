@@ -16,11 +16,12 @@ function TabIcon({ name, focused }: { name: string; focused: boolean }) {
     home: Home,
     search: Search,
     availability: Calendar,
+    calendar: Calendar,
     requests: Inbox,
     messages: MessageSquare,
   };
   const Icon = icons[name] || Home;
-  return <Icon size={22} color={focused ? "#F97316" : "#9CA3AF"} />;
+  return <Icon size={26} color={focused ? "#F97316" : "#9CA3AF"} />;
 }
 
 export default function TabsLayout() {
@@ -45,11 +46,11 @@ export default function TabsLayout() {
         tabBarStyle: {
           backgroundColor: "#FFFFFF",
           borderTopColor: "#E5E7EB",
-          paddingBottom: 24,
+          paddingTop: 8,
           height: 75,
         },
         tabBarLabelStyle: {
-          fontSize: 11,
+          fontSize: 9,
           fontWeight: "600",
         },
       }}
@@ -70,6 +71,15 @@ export default function TabsLayout() {
           title: "Find Games",
           tabBarIcon: ({ focused }) => (
             <TabIcon name="search" focused={focused} />
+          ),
+        }}
+      />
+      <Tabs.Screen
+        name="calendar"
+        options={{
+          title: "Calendar",
+          tabBarIcon: ({ focused }) => (
+            <TabIcon name="calendar" focused={focused} />
           ),
         }}
       />

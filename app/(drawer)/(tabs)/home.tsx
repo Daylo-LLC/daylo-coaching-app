@@ -154,17 +154,17 @@ export default function Home() {
         <View style={styles.schoolInfo}>
           <View style={{ width: "70%" }}>
             <Text style={styles.schoolName}>{school?.name}</Text>
-            <Text>{school?.county}</Text>
-            <Text style={{ color: "#6B7280", marginVertical: 4 }}>
-              {school?.coach_schools?.[0]?.sport
-                ? school?.coach_schools[0].sport.charAt(0).toUpperCase() +
-                  school?.coach_schools[0].sport.slice(1)
-                : ""}{" "}
-              • {school?.division}
+            <Text style={{ color: "#6B7280", marginVertical: 2 }}>
+              {school?.county} • {school?.division}
             </Text>
           </View>
           <View style={{ width: "30%" }}>
-            <Pressable style={styles.addButton } onPress={() => {router.push("/search")}}>
+            <Pressable
+              style={styles.addButton}
+              onPress={() => {
+                router.push("/search");
+              }}
+            >
               <Text style={styles.buttonText}>Add Game</Text>
             </Pressable>
           </View>
@@ -182,7 +182,7 @@ export default function Home() {
                 activeTab === "schedule" && styles.activeTabText,
               ]}
             >
-              My Schedule
+              Upcoming Games
             </Text>
           </TouchableOpacity>
           <TouchableOpacity

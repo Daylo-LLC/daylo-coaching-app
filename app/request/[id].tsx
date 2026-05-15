@@ -285,6 +285,11 @@ export default function RequestDetailScreen() {
           {/* Sport */}
           <Text style={{ fontSize: 28, fontWeight: "800", color: "#1B2A4A" }}>
             {request.sport.charAt(0).toUpperCase() + request.sport.slice(1)}
+            {" · "}
+            {request.gender === "coed"
+              ? "Coed"
+              : request.gender?.charAt(0).toUpperCase() +
+                request.gender?.slice(1)}
           </Text>
 
           {/* School */}
@@ -352,7 +357,7 @@ export default function RequestDetailScreen() {
               }}
             >
               <Text style={{ fontSize: 14, color: "#6B7280" }}>Location</Text>
-              {isPending && !isIncoming && !editingVenue && request.venue && (
+              {!editingVenue && (
                 <TouchableOpacity
                   onPress={() => {
                     setVenueDraft(request.venue || "");
@@ -503,6 +508,26 @@ export default function RequestDetailScreen() {
                 </Text>
               </TouchableOpacity>
             </View>
+          )}
+
+          {/* Cancel button for requestor */}
+          {isPending && !isIncoming && (
+            <TouchableOpacity
+              onPress={() => handleAction("declined")}
+              style={{
+                backgroundColor: "#EF4444",
+                borderRadius: 8,
+                padding: 14,
+                alignItems: "center",
+                marginTop: 24,
+              }}
+            >
+              <Text
+                style={{ color: "#FFFFFF", fontWeight: "700", fontSize: 16 }}
+              >
+                Cancel Request
+              </Text>
+            </TouchableOpacity>
           )}
 
           {/* Message Button */}

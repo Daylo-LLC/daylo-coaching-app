@@ -18,6 +18,10 @@ type CoachSchool = Tables<"coach_schools">;
 type SchoolChangeRequest = Tables<"school_change_requests">;
 
 const SPORTS = ["football", "soccer"] as const;
+const GENDERS = ["boys", "girls", "coed"] as const;
+type Gender = (typeof GENDERS)[number];
+const genderLabel = (g: string) =>
+  g === "coed" ? "Coed" : g.charAt(0).toUpperCase() + g.slice(1);
 const DIVISIONS = [
   "A-Public",
   "A-Private",
@@ -53,6 +57,7 @@ export default function ManageSchoolScreen() {
   // Add sport
   const [showAddSport, setShowAddSport] = useState(false);
   const [newSport, setNewSport] = useState<string>("");
+  const [newGender, setNewGender] = useState<Gender>("boys");
 
   // School change request
   const [showChangeRequest, setShowChangeRequest] = useState(false);
@@ -122,32 +127,21 @@ export default function ManageSchoolScreen() {
     }
   };
 
-  const handleChangeSport = async (
-    coachSchoolId: string,
-    newSportVal: string,
-  ) => {
-    setSaving(true);
-    const { error } = await supabase
-      .from("coach_schools")
-      .update({ sport: newSportVal })
-      .eq("id", coachSchoolId);
-    setSaving(false);
-    if (error) {
-      Alert.alert("Error", error.message);
-    } else {
-      fetchData();
-    }
-  };
-
   const handleAddSport = async () => {
     if (!profile || !school || !newSport) return;
 
-    // Check if already exists
+    // Check if already exists (same sport + same gender)
     const existing = coachSchools.find(
-      (cs) => cs.sport === newSport && cs.school_id === school.id,
+      (cs) =>
+        cs.sport === newSport &&
+        cs.school_id === school.id &&
+        (cs as any).gender === newGender,
     );
     if (existing) {
-      Alert.alert("Error", "You already coach this sport at this school.");
+      Alert.alert(
+        "Error",
+        `You already coach ${genderLabel(newGender)} ${newSport} at this school.`,
+      );
       return;
     }
 
@@ -156,14 +150,16 @@ export default function ManageSchoolScreen() {
       coach_id: profile.id,
       school_id: school.id,
       sport: newSport,
+      gender: newGender,
       is_primary: coachSchools.length === 0,
-    });
+    } as any);
     setSaving(false);
     if (error) {
       Alert.alert("Error", error.message);
     } else {
       setShowAddSport(false);
       setNewSport("");
+      setNewGender("boys");
       fetchData();
     }
   };
@@ -236,7 +232,7 @@ export default function ManageSchoolScreen() {
 
   return (
     <>
-    <Header title="Manage School" />
+      <Header title="Manage School" />
       <ScrollView style={{ flex: 1, backgroundColor: "#F9FAFB" }}>
         <View style={{ padding: 16 }}>
           {/* Current School Card */}
@@ -431,7 +427,7 @@ export default function ManageSchoolScreen() {
               marginBottom: 16,
             }}
           >
-            My Sports
+            My Teams
           </Text>
 
           {coachSchools.length === 0 ? (
@@ -445,7 +441,7 @@ export default function ManageSchoolScreen() {
               }}
             >
               <Text style={{ color: "#6B7280", fontSize: 14 }}>
-                No sports added yet.
+                No teams added yet.
               </Text>
             </View>
           ) : (
@@ -475,6 +471,8 @@ export default function ManageSchoolScreen() {
                       }}
                     >
                       {cs.sport.charAt(0).toUpperCase() + cs.sport.slice(1)}
+                      {" \u00B7 "}
+                      {genderLabel((cs as any).gender || "boys")}
                     </Text>
                     {cs.is_primary && (
                       <Text
@@ -490,29 +488,6 @@ export default function ManageSchoolScreen() {
                     )}
                   </View>
                   <View style={{ flexDirection: "row", gap: 8 }}>
-                    {/* Switch sport button */}
-                    {SPORTS.filter((s) => s !== cs.sport).map((s) => (
-                      <TouchableOpacity
-                        key={s}
-                        onPress={() => handleChangeSport(cs.id, s)}
-                        style={{
-                          backgroundColor: "#EFF6FF",
-                          paddingHorizontal: 12,
-                          paddingVertical: 6,
-                          borderRadius: 6,
-                        }}
-                      >
-                        <Text
-                          style={{
-                            color: "#3B82F6",
-                            fontSize: 12,
-                            fontWeight: "600",
-                          }}
-                        >
-                          Switch to {s.charAt(0).toUpperCase() + s.slice(1)}
-                        </Text>
-                      </TouchableOpacity>
-                    ))}
                     {coachSchools.length > 1 && (
                       <TouchableOpacity
                         onPress={() => handleRemoveSport(cs.id)}
@@ -555,7 +530,7 @@ export default function ManageSchoolScreen() {
               <Text
                 style={{ color: "#FFFFFF", fontSize: 15, fontWeight: "700" }}
               >
-                Add Another Sport
+                Add a Team
               </Text>
             </TouchableOpacity>
           ) : (
@@ -575,7 +550,17 @@ export default function ManageSchoolScreen() {
                   marginBottom: 12,
                 }}
               >
-                Select Sport
+                Add a New Team
+              </Text>
+              <Text
+                style={{
+                  fontSize: 14,
+                  fontWeight: "600",
+                  color: "#374151",
+                  marginBottom: 8,
+                }}
+              >
+                Sport
               </Text>
               <View
                 style={{
@@ -610,11 +595,55 @@ export default function ManageSchoolScreen() {
                   </TouchableOpacity>
                 ))}
               </View>
+              <Text
+                style={{
+                  fontSize: 16,
+                  fontWeight: "600",
+                  color: "#1B2A4A",
+                  marginBottom: 12,
+                }}
+              >
+                Gender
+              </Text>
+              <View
+                style={{
+                  flexDirection: "row",
+                  gap: 10,
+                  marginBottom: 16,
+                }}
+              >
+                {GENDERS.map((g) => (
+                  <TouchableOpacity
+                    key={g}
+                    onPress={() => setNewGender(g)}
+                    style={{
+                      flex: 1,
+                      paddingVertical: 12,
+                      borderRadius: 8,
+                      borderWidth: 1,
+                      borderColor: newGender === g ? "#F97316" : "#D1D5DB",
+                      backgroundColor: newGender === g ? "#FFF7ED" : "#FFFFFF",
+                      alignItems: "center",
+                    }}
+                  >
+                    <Text
+                      style={{
+                        fontSize: 15,
+                        fontWeight: "600",
+                        color: newGender === g ? "#F97316" : "#374151",
+                      }}
+                    >
+                      {genderLabel(g)}
+                    </Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
               <View style={{ flexDirection: "row", gap: 12 }}>
                 <TouchableOpacity
                   onPress={() => {
                     setShowAddSport(false);
                     setNewSport("");
+                    setNewGender("boys");
                   }}
                   style={{
                     flex: 1,
@@ -645,7 +674,7 @@ export default function ManageSchoolScreen() {
                     <ActivityIndicator size="small" color="#FFFFFF" />
                   ) : (
                     <Text style={{ color: "#FFFFFF", fontWeight: "600" }}>
-                      Add Sport
+                      Add Team
                     </Text>
                   )}
                 </TouchableOpacity>
