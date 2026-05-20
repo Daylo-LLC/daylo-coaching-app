@@ -163,10 +163,11 @@ export default function SchoolDetail() {
         time_end: selectedSlot.time_end,
         sport: selectedSlot.sport,
         gender: (selectedSlot as any).gender || "boys",
-        home_away:
-          selectedSlot.home_away_preference === "either"
-            ? "neutral"
-            : selectedSlot.home_away_preference || "neutral",
+        home_away: ["home", "away", "neutral"].includes(
+          selectedSlot.home_away_preference,
+        )
+          ? selectedSlot.home_away_preference
+          : "neutral",
         venue: finalVenue || null,
         status: "pending",
       });
