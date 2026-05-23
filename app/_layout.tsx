@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { Redirect, router, Slot } from "expo-router";
 import * as Notifications from "expo-notifications";
 import { useAuthStore } from "../src/store/auth";
+import { useNotificationStore } from "../src/store/notifications";
 
 import {
   registerForPushNotifications,
@@ -10,6 +11,7 @@ import {
 
 export default function RootLayout() {
   const initialize = useAuthStore((s) => s.initialize);
+  const { subscribe, unsubscribe, fetchUnreadCount } = useNotificationStore();
   const responseListener = useRef<Notifications.EventSubscription | null>(null);
 
   useEffect(() => {
@@ -17,6 +19,8 @@ export default function RootLayout() {
       const { user } = useAuthStore.getState();
       if (user) {
         registerForPushNotifications(user.id);
+        subscribe(user.id);
+        fetchUnreadCount(user.id);
       }
     });
 
@@ -36,6 +40,7 @@ export default function RootLayout() {
       if (responseListener.current) {
         responseListener.current.remove();
       }
+      unsubscribe();
     };
   }, []);
 

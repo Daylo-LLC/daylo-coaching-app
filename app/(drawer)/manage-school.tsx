@@ -13,11 +13,11 @@ import { supabase } from "../../src/lib/supabase";
 import { Tables } from "../../src/types/database";
 import SchoolSearch from "../../src/components/SchoolSearch";
 import Header from "@/components/Header";
+import { useSports } from "../../src/lib/useSports";
 
 type CoachSchool = Tables<"coach_schools">;
 type SchoolChangeRequest = Tables<"school_change_requests">;
 
-const SPORTS = ["football", "soccer"] as const;
 const GENDERS = ["boys", "girls", "coed"] as const;
 type Gender = (typeof GENDERS)[number];
 const genderLabel = (g: string) =>
@@ -35,6 +35,7 @@ const DIVISIONS = [
 
 export default function ManageSchoolScreen() {
   const { profile, fetchProfile } = useAuthStore();
+  const { sports: SPORTS, loading: sportsLoading } = useSports();
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
 
@@ -565,35 +566,40 @@ export default function ManageSchoolScreen() {
               <View
                 style={{
                   flexDirection: "row",
+                  flexWrap: "wrap",
                   gap: 10,
                   marginBottom: 16,
                 }}
               >
-                {SPORTS.map((s) => (
-                  <TouchableOpacity
-                    key={s}
-                    onPress={() => setNewSport(s)}
-                    style={{
-                      flex: 1,
-                      paddingVertical: 12,
-                      borderRadius: 8,
-                      borderWidth: 1,
-                      borderColor: newSport === s ? "#F97316" : "#D1D5DB",
-                      backgroundColor: newSport === s ? "#FFF7ED" : "#FFFFFF",
-                      alignItems: "center",
-                    }}
-                  >
-                    <Text
+                {sportsLoading ? (
+                  <ActivityIndicator size="small" color="#F97316" />
+                ) : (
+                  SPORTS.map((s) => (
+                    <TouchableOpacity
+                      key={s}
+                      onPress={() => setNewSport(s)}
                       style={{
-                        fontSize: 15,
-                        fontWeight: "600",
-                        color: newSport === s ? "#F97316" : "#374151",
+                        paddingHorizontal: 16,
+                        paddingVertical: 12,
+                        borderRadius: 8,
+                        borderWidth: 1,
+                        borderColor: newSport === s ? "#F97316" : "#D1D5DB",
+                        backgroundColor: newSport === s ? "#FFF7ED" : "#FFFFFF",
+                        alignItems: "center",
                       }}
                     >
-                      {s.charAt(0).toUpperCase() + s.slice(1)}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+                      <Text
+                        style={{
+                          fontSize: 15,
+                          fontWeight: "600",
+                          color: newSport === s ? "#F97316" : "#374151",
+                        }}
+                      >
+                        {s.charAt(0).toUpperCase() + s.slice(1)}
+                      </Text>
+                    </TouchableOpacity>
+                  ))
+                )}
               </View>
               <Text
                 style={{

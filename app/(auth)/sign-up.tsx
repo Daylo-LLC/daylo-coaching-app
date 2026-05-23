@@ -13,8 +13,10 @@ import { Link, router } from "expo-router";
 import { useAuthStore } from "../../src/store/auth";
 import { supabase } from "../../src/lib/supabase";
 import SchoolSearch from "../../src/components/SchoolSearch";
+import { useSports } from "../../src/lib/useSports";
 
 export default function SignUp() {
+  const { sports: availableSports, loading: sportsLoading } = useSports();
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [email, setEmail] = useState("");
@@ -24,9 +26,7 @@ export default function SignUp() {
     id: string;
     name: string;
   } | null>(null);
-  const [selectedSport, setSelectedSport] = useState<
-    "football" | "soccer" | null
-  >(null);
+  const [selectedSport, setSelectedSport] = useState<string | null>(null);
   const [selectedDivision, setSelectedDivision] = useState<string | null>(null);
   const [sportDropdownOpen, setSportDropdownOpen] = useState(false);
   const [divisionDropdownOpen, setDivisionDropdownOpen] = useState(false);
@@ -279,30 +279,37 @@ export default function SignUp() {
                   shadowRadius: 4,
                 }}
               >
-                {(["football", "soccer"] as const).map((sport) => (
-                  <TouchableOpacity
-                    key={sport}
-                    onPress={() => {
-                      setSelectedSport(sport);
-                      setSportDropdownOpen(false);
-                    }}
-                    style={{
-                      padding: 14,
-                      borderBottomWidth: sport === "football" ? 1 : 0,
-                      borderBottomColor: "#E5E7EB",
-                    }}
-                  >
-                    <Text
+                {sportsLoading ? (
+                  <View style={{ padding: 14, alignItems: "center" }}>
+                    <ActivityIndicator size="small" color="#F97316" />
+                  </View>
+                ) : (
+                  availableSports.map((sport, index) => (
+                    <TouchableOpacity
+                      key={sport}
+                      onPress={() => {
+                        setSelectedSport(sport);
+                        setSportDropdownOpen(false);
+                      }}
                       style={{
-                        color: "#374151",
-                        fontSize: 16,
-                        textTransform: "capitalize",
+                        padding: 14,
+                        borderBottomWidth:
+                          index < availableSports.length - 1 ? 1 : 0,
+                        borderBottomColor: "#E5E7EB",
                       }}
                     >
-                      {sport}
-                    </Text>
-                  </TouchableOpacity>
-                ))}
+                      <Text
+                        style={{
+                          color: "#374151",
+                          fontSize: 16,
+                          textTransform: "capitalize",
+                        }}
+                      >
+                        {sport}
+                      </Text>
+                    </TouchableOpacity>
+                  ))
+                )}
               </View>
             )}
           </View>

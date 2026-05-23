@@ -32,8 +32,10 @@ export default function SchoolDetail() {
   const [slots, setSlots] = useState<Availability[]>([]);
   const [coaches, setCoaches] = useState<
     Array<{
+      id: string;
       coach_id: string;
       sport: string;
+      gender: string;
       profiles: { first_name: string | null; last_name: string | null } | null;
     }>
   >([]);
@@ -93,7 +95,9 @@ export default function SchoolDetail() {
         // Fetch coaches
         const { data: coachesData } = await supabase
           .from("coach_schools")
-          .select("coach_id, sport, profiles(first_name, last_name)")
+          .select(
+            "id, coach_id, sport, gender, profiles(first_name, last_name)",
+          )
           .eq("school_id", id);
 
         setCoaches(coachesData || []);
@@ -371,7 +375,7 @@ export default function SchoolDetail() {
             ) : (
               coaches.map((coach) => (
                 <View
-                  key={`${coach.coach_id}-${coach.sport}`}
+                  key={coach.id}
                   style={{
                     flexDirection: "row",
                     justifyContent: "space-between",
@@ -383,7 +387,7 @@ export default function SchoolDetail() {
                     {coach.profiles?.first_name} {coach.profiles?.last_name}
                   </Text>
                   <Text style={{ fontSize: 12, color: "#6B7280" }}>
-                    {coach.sport}
+                    {coach.sport} · {coach.gender}
                   </Text>
                 </View>
               ))

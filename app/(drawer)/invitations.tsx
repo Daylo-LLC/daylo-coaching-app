@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback } from "react";
 import {
   View,
   Text,
@@ -10,6 +10,7 @@ import {
   RefreshControl,
 } from "react-native";
 import { Send, Mail, CheckCircle, Clock } from "lucide-react-native";
+import { useFocusEffect } from "@react-navigation/native";
 import { useAuthStore } from "../../src/store/auth";
 import { supabase } from "../../src/lib/supabase";
 import Header from "@/components/Header";
@@ -45,9 +46,11 @@ export default function InvitationsScreen() {
     setRefreshing(false);
   }, [profile]);
 
-  useEffect(() => {
-    fetchInvitations();
-  }, [fetchInvitations]);
+  useFocusEffect(
+    useCallback(() => {
+      fetchInvitations();
+    }, [fetchInvitations]),
+  );
 
   const handleRefresh = () => {
     setRefreshing(true);

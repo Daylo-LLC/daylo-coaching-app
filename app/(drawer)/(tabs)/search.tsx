@@ -19,15 +19,15 @@ import { router } from "expo-router";
 import { supabase } from "../../../src/lib/supabase";
 import { Tables } from "../../../src/types/database";
 import { useAuthStore } from "../../../src/store/auth";
+import { useSports } from "../../../src/lib/useSports";
 
 type School = Tables<"schools">;
-
-const SPORTS = ["football", "soccer"] as const;
 const GENDERS = ["boys", "girls", "coed"] as const;
 const DIVISIONS = ["1A", "2A", "3A", "4A", "5A", "6A"] as const;
 
 export default function Search() {
   const { profile } = useAuthStore();
+  const { sports: SPORTS, loading: sportsLoading } = useSports();
   const [query, setQuery] = useState("");
   const [sport, setSport] = useState<string | null>(null);
   const [gender, setGender] = useState<string | null>(null);
@@ -178,29 +178,40 @@ export default function Search() {
             >
               SPORT
             </Text>
-            <View style={{ flexDirection: "row", gap: 8, marginBottom: 12 }}>
-              {SPORTS.map((s) => (
-                <TouchableOpacity
-                  key={s}
-                  onPress={() => setSport(sport === s ? null : s)}
-                  style={{
-                    paddingHorizontal: 16,
-                    paddingVertical: 8,
-                    borderRadius: 20,
-                    backgroundColor: sport === s ? "#1B2A4A" : "#F3F4F6",
-                  }}
-                >
-                  <Text
+            <View
+              style={{
+                flexDirection: "row",
+                flexWrap: "wrap",
+                gap: 8,
+                marginBottom: 12,
+              }}
+            >
+              {sportsLoading ? (
+                <ActivityIndicator size="small" color="#1B2A4A" />
+              ) : (
+                SPORTS.map((s) => (
+                  <TouchableOpacity
+                    key={s}
+                    onPress={() => setSport(sport === s ? null : s)}
                     style={{
-                      color: sport === s ? "#FFFFFF" : "#374151",
-                      fontWeight: "600",
-                      fontSize: 13,
+                      paddingHorizontal: 16,
+                      paddingVertical: 8,
+                      borderRadius: 20,
+                      backgroundColor: sport === s ? "#1B2A4A" : "#F3F4F6",
                     }}
                   >
-                    {s.charAt(0).toUpperCase() + s.slice(1)}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+                    <Text
+                      style={{
+                        color: sport === s ? "#FFFFFF" : "#374151",
+                        fontWeight: "600",
+                        fontSize: 13,
+                      }}
+                    >
+                      {s.charAt(0).toUpperCase() + s.slice(1)}
+                    </Text>
+                  </TouchableOpacity>
+                ))
+              )}
             </View>
 
             <Text

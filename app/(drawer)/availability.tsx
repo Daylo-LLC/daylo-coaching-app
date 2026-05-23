@@ -23,7 +23,6 @@ import { useFocusEffect } from "expo-router";
 
 type Availability = Tables<"availability">;
 
-const SPORTS = ["football", "soccer"] as const;
 const GENDERS = ["boys", "girls", "coed"] as const;
 type Gender = (typeof GENDERS)[number];
 const genderLabel = (g: string) =>
@@ -39,7 +38,7 @@ export default function AvailabilityScreen() {
   const [editingId, setEditingId] = useState<string | null>(null);
 
   // Form state
-  const [formSport, setFormSport] = useState<string>("football");
+  const [formSport, setFormSport] = useState<string>("");
   const [formDate, setFormDate] = useState("");
   const [formTimeStart, setFormTimeStart] = useState("");
   const [formTimeEnd, setFormTimeEnd] = useState("");
@@ -208,7 +207,7 @@ export default function AvailabilityScreen() {
   };
 
   const resetForm = () => {
-    setFormSport("football");
+    setFormSport("");
     setFormGender("boys");
     setFormDate("");
     setFormTimeStart("");

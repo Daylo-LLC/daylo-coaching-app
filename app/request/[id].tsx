@@ -163,7 +163,14 @@ export default function RequestDetailScreen() {
       })
       .eq("id", id);
     if (error) {
-      Alert.alert("Error", error.message);
+      if (error.message?.includes("Schedule conflict")) {
+        Alert.alert(
+          "Schedule Conflict",
+          "There is already a confirmed game within 2 hours of this time slot. Please decline this request or reschedule.",
+        );
+      } else {
+        Alert.alert("Error", error.message);
+      }
     } else {
       setAcceptModalVisible(false);
       fetchRequest();

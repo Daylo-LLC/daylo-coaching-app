@@ -17,7 +17,7 @@ import { useAuthStore } from "../../../src/store/auth";
 import { supabase } from "../../../src/lib/supabase";
 import { Tables } from "../../../src/types/database";
 import Header from "@/components/Header";
-import { Calendar } from "lucide-react-native";
+import { Calendar, MapPin } from "lucide-react-native";
 
 type Request = Tables<"requests"> & {
   requester_school?: {
@@ -250,6 +250,7 @@ export default function Home() {
                     >
                       <Calendar size={40} color="#F97316" />
                       <TouchableOpacity
+                        style={{ flex: 1 }}
                         onPress={() => router.push(`/request/${game.id}`)}
                       >
                         <Text
@@ -282,9 +283,37 @@ export default function Home() {
                           }}
                         >
                           {moment(game.time_start, "HH:mm").format("h:mm A")} –{" "}
-                          {moment(game.time_end, "HH:mm").format("h:mm A")} •{" "}
-                          {game.venue || "TBD"}
+                          {moment(game.time_end, "HH:mm").format("h:mm A")}
+                          {game.venue && game.venue.length <= 20
+                            ? ` • ${game.venue}`
+                            : ""}
                         </Text>
+                        {game.venue && game.venue.length > 20 && (
+                          <View
+                            style={{
+                              flexDirection: "row",
+                              alignItems: "flex-start",
+                              marginTop: 2,
+                              flexShrink: 1,
+                            }}
+                          >
+                            <MapPin
+                              size={12}
+                              color="#9CA3AF"
+                              style={{ marginTop: 2, marginRight: 4 }}
+                            />
+                            <Text
+                              style={{
+                                fontSize: 11,
+                                color: "#9CA3AF",
+                                flex: 1,
+                                flexWrap: "wrap",
+                              }}
+                            >
+                              {game.venue}
+                            </Text>
+                          </View>
+                        )}
                       </TouchableOpacity>
                     </View>
                   );

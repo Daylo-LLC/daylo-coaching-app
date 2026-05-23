@@ -118,7 +118,14 @@ export default function RequestsScreen() {
               .update({ status: action })
               .eq("id", requestId);
             if (error) {
-              Alert.alert("Error", error.message);
+              if (error.message?.includes("Schedule conflict")) {
+                Alert.alert(
+                  "Schedule Conflict",
+                  "There is already a confirmed game within 2 hours of this time slot. Please decline this request or reschedule.",
+                );
+              } else {
+                Alert.alert("Error", error.message);
+              }
             } else {
               fetchRequests();
             }

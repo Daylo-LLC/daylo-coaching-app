@@ -227,6 +227,15 @@ export default function RootLayout() {
             headerShown: false,
           }}
         />
+        <Drawer.Screen
+          name="notifications"
+          options={{
+            drawerLabel: () => null,
+            title: "Notifications",
+            headerShown: false,
+            drawerItemStyle: { display: "none" },
+          }}
+        />
       </Drawer>
     </GestureHandlerRootView>
   );

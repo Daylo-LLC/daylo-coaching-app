@@ -13,8 +13,7 @@ import {
 import { router } from "expo-router";
 import { useAuthStore } from "../src/store/auth";
 import { supabase } from "../src/lib/supabase";
-
-const SPORTS = ["football", "soccer"] as const;
+import { useSports } from "../src/lib/useSports";
 const DIVISIONS = [
   "A-Public",
   "A-Private",
@@ -28,6 +27,7 @@ const DIVISIONS = [
 
 export default function Onboarding() {
   const { profile, fetchProfile } = useAuthStore();
+  const { sports: SPORTS, loading: sportsLoading } = useSports();
   const [step, setStep] = useState(0);
 
   // Step 0: Personal details
@@ -332,57 +332,62 @@ export default function Onboarding() {
               Sport *
             </Text>
             <View style={{ gap: 10, marginBottom: 24 }}>
-              {SPORTS.map((s) => (
-                <TouchableOpacity
-                  key={s}
-                  onPress={() => setSelectedSport(s)}
-                  style={{
-                    flexDirection: "row",
-                    alignItems: "center",
-                    backgroundColor:
-                      selectedSport === s ? "#1B2A4A" : "#FFFFFF",
-                    borderWidth: 1,
-                    borderColor: selectedSport === s ? "#1B2A4A" : "#D1D5DB",
-                    borderRadius: 12,
-                    padding: 18,
-                  }}
-                >
-                  <View
+              {sportsLoading ? (
+                <ActivityIndicator size="small" color="#F97316" />
+              ) : (
+                SPORTS.map((s) => (
+                  <TouchableOpacity
+                    key={s}
+                    onPress={() => setSelectedSport(s)}
                     style={{
-                      width: 24,
-                      height: 24,
-                      borderRadius: 12,
-                      borderWidth: 2,
-                      borderColor: selectedSport === s ? "#FFFFFF" : "#D1D5DB",
-                      backgroundColor:
-                        selectedSport === s ? "#F97316" : "transparent",
-                      marginRight: 14,
-                      justifyContent: "center",
+                      flexDirection: "row",
                       alignItems: "center",
+                      backgroundColor:
+                        selectedSport === s ? "#1B2A4A" : "#FFFFFF",
+                      borderWidth: 1,
+                      borderColor: selectedSport === s ? "#1B2A4A" : "#D1D5DB",
+                      borderRadius: 12,
+                      padding: 18,
                     }}
                   >
-                    {selectedSport === s && (
-                      <View
-                        style={{
-                          width: 10,
-                          height: 10,
-                          borderRadius: 5,
-                          backgroundColor: "#FFFFFF",
-                        }}
-                      />
-                    )}
-                  </View>
-                  <Text
-                    style={{
-                      fontSize: 17,
-                      fontWeight: "700",
-                      color: selectedSport === s ? "#FFFFFF" : "#374151",
-                    }}
-                  >
-                    {s.charAt(0).toUpperCase() + s.slice(1)}
-                  </Text>
-                </TouchableOpacity>
-              ))}
+                    <View
+                      style={{
+                        width: 24,
+                        height: 24,
+                        borderRadius: 12,
+                        borderWidth: 2,
+                        borderColor:
+                          selectedSport === s ? "#FFFFFF" : "#D1D5DB",
+                        backgroundColor:
+                          selectedSport === s ? "#F97316" : "transparent",
+                        marginRight: 14,
+                        justifyContent: "center",
+                        alignItems: "center",
+                      }}
+                    >
+                      {selectedSport === s && (
+                        <View
+                          style={{
+                            width: 10,
+                            height: 10,
+                            borderRadius: 5,
+                            backgroundColor: "#FFFFFF",
+                          }}
+                        />
+                      )}
+                    </View>
+                    <Text
+                      style={{
+                        fontSize: 17,
+                        fontWeight: "700",
+                        color: selectedSport === s ? "#FFFFFF" : "#374151",
+                      }}
+                    >
+                      {s.charAt(0).toUpperCase() + s.slice(1)}
+                    </Text>
+                  </TouchableOpacity>
+                ))
+              )}
             </View>
 
             {/* Division Selection */}
