@@ -26,7 +26,9 @@ function CustomDrawerContent({ navigation }: { navigation: any }) {
       <View style={styles.header}>
         <Image
           source={
-            profile?.avatar_url ? { uri: profile.avatar_url } : require("../../assets/logo.png")
+            profile?.avatar_url
+              ? { uri: profile.avatar_url }
+              : require("../../assets/logo.png")
           }
           style={{ width: 150, height: 150, borderRadius: 75 }}
         />
@@ -109,6 +111,30 @@ function CustomDrawerContent({ navigation }: { navigation: any }) {
           </Text>
         </TouchableOpacity>
         <TouchableOpacity
+          onPress={() => router.push("/(drawer)/invitations")}
+          style={[
+            {
+              paddingVertical: 14,
+              paddingHorizontal: 16,
+              borderRadius: 8,
+            },
+            isActive("invitations") && {
+              backgroundColor: "#F97316",
+            },
+          ]}
+        >
+          <Text
+            style={[
+              { fontSize: 16, fontWeight: "500" },
+              isActive("invitations")
+                ? { color: "#FFFFFF" }
+                : { color: "#1B2A4A" },
+            ]}
+          >
+            Invite Coaches
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
           onPress={() => router.push("/(drawer)/profile")}
           style={[
             {
@@ -183,6 +209,14 @@ export default function RootLayout() {
             drawerLabel: "Availability",
             title: "My Availability",
             header: () => <Header title="My Availability" />,
+          }}
+        />
+        <Drawer.Screen
+          name="invitations"
+          options={{
+            drawerLabel: "Invite Coaches",
+            title: "Invite Coaches",
+            headerShown: false,
           }}
         />
         <Drawer.Screen

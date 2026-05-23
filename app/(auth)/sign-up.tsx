@@ -11,6 +11,7 @@ import {
 } from "react-native";
 import { Link, router } from "expo-router";
 import { useAuthStore } from "../../src/store/auth";
+import { supabase } from "../../src/lib/supabase";
 import SchoolSearch from "../../src/components/SchoolSearch";
 
 export default function SignUp() {
@@ -58,6 +59,18 @@ export default function SignUp() {
     }
     setLoading(true);
     setError(null);
+
+    const { data: emailExists } = await supabase.rpc("check_email_exists", {
+      email_address: email.trim(),
+    });
+    if (emailExists) {
+      setLoading(false);
+      setError(
+        "An account with this email already exists. Please sign in instead.",
+      );
+      return;
+    }
+
     const result = await signUp(
       email.trim(),
       password,
