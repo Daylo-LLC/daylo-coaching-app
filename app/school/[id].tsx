@@ -8,6 +8,10 @@ import {
   Alert,
   TextInput,
   Modal,
+  KeyboardAvoidingView,
+  TouchableWithoutFeedback,
+  Keyboard,
+  Platform,
 } from "react-native";
 import moment from "moment";
 import { useLocalSearchParams } from "expo-router";
@@ -544,192 +548,206 @@ export default function SchoolDetail() {
         visible={showRequestModal}
         transparent
         animationType="fade"
-        onRequestClose={() => setShowRequestModal(false)}
+        onRequestClose={() => {
+          Keyboard.dismiss();
+          setShowRequestModal(false);
+        }}
       >
-        <View
-          style={{
-            flex: 1,
-            backgroundColor: "rgba(0, 0, 0, 0.5)",
-            justifyContent: "center",
-            alignItems: "center",
-            padding: 20,
-          }}
-        >
-          <View
+        <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+          <KeyboardAvoidingView
+            behavior={Platform.OS === "ios" ? "padding" : "height"}
             style={{
-              backgroundColor: "#FFFFFF",
-              borderRadius: 12,
-              padding: 20,
-              width: "100%",
-              maxWidth: 400,
+              flex: 1,
+              backgroundColor: "rgba(0, 0, 0, 0.5)",
             }}
           >
-            <Text
+            <View
               style={{
-                fontSize: 18,
-                fontWeight: "700",
-                color: "#1B2A4A",
-                marginBottom: 12,
+                flex: 1,
+                justifyContent: "center",
+                alignItems: "center",
+                padding: 20,
               }}
             >
-              Request Game
-            </Text>
-            {selectedSlot && (
-              <Text
-                style={{ fontSize: 14, color: "#6B7280", marginBottom: 16 }}
-              >
-                {new Date(
-                  selectedSlot.date + " " + selectedSlot.time_start,
-                ).toLocaleDateString()}{" "}
-                at{" "}
-                {moment(selectedSlot.time_start, "HH:mm:ss").format("h:mm A")}
-              </Text>
-            )}
-
-            {/* Venue */}
-            {selectedSlot &&
-              school &&
-              (() => {
-                const resolved: ResolvedVenue = resolveVenue({
-                  pref:
-                    (selectedSlot.home_away_preference as HomeAwayPref) ||
-                    "either",
-                  slotVenue: selectedSlot.venue,
-                  coachSchool: {
-                    name: school.name,
-                    address: school.address,
-                    city: school.city,
-                    state: school.state,
-                  },
-                  requesterSchool: requesterSchool
-                    ? {
-                        name: requesterSchool.name,
-                        address: requesterSchool.address,
-                        city: requesterSchool.city,
-                        state: requesterSchool.state,
-                      }
-                    : null,
-                });
-                return (
-                  <View style={{ marginBottom: 16 }}>
-                    <Text
-                      style={{
-                        fontSize: 13,
-                        fontWeight: "600",
-                        color: "#374151",
-                        marginBottom: 6,
-                      }}
-                    >
-                      Venue
-                    </Text>
-                    {resolved.editable ? (
-                      <>
-                        <TextInput
-                          style={{
-                            borderWidth: 1,
-                            borderColor: "#D1D5DB",
-                            borderRadius: 8,
-                            padding: 12,
-                            fontSize: 14,
-                          }}
-                          placeholder="Suggest a venue"
-                          placeholderTextColor="#9CA3AF"
-                          value={venueInput}
-                          onChangeText={setVenueInput}
-                        />
-                        <Text
-                          style={{
-                            fontSize: 11,
-                            color: "#9CA3AF",
-                            marginTop: 4,
-                          }}
-                        >
-                          You can change this later until the coach accepts.
-                        </Text>
-                      </>
-                    ) : (
-                      <View
-                        style={{
-                          backgroundColor: "#F3F4F6",
-                          borderRadius: 8,
-                          padding: 12,
-                        }}
-                      >
-                        <Text style={{ fontSize: 14, color: "#1B2A4A" }}>
-                          {resolved.display}
-                        </Text>
-                        <Text
-                          style={{
-                            fontSize: 11,
-                            color: "#9CA3AF",
-                            marginTop: 2,
-                          }}
-                        >
-                          {resolved.isSchoolAddressFallback
-                            ? "Using the host school's address"
-                            : "Set by coach"}
-                        </Text>
-                      </View>
-                    )}
-                  </View>
-                );
-              })()}
-
-            <TextInput
-              style={{
-                borderWidth: 1,
-                borderColor: "#D1D5DB",
-                borderRadius: 8,
-                padding: 12,
-                fontSize: 14,
-                marginBottom: 16,
-                minHeight: 80,
-                textAlignVertical: "top",
-              }}
-              placeholder="Add a message (optional)"
-              placeholderTextColor="#9CA3AF"
-              value={message}
-              onChangeText={setMessage}
-              multiline
-            />
-            <View style={{ flexDirection: "row", gap: 12 }}>
-              <TouchableOpacity
-                onPress={() => setShowRequestModal(false)}
+              <View
                 style={{
-                  flex: 1,
-                  borderWidth: 1,
-                  borderColor: "#D1D5DB",
-                  borderRadius: 8,
-                  padding: 12,
-                  alignItems: "center",
+                  backgroundColor: "#FFFFFF",
+                  borderRadius: 12,
+                  padding: 20,
+                  width: "100%",
+                  maxWidth: 400,
                 }}
               >
-                <Text style={{ color: "#6B7280", fontWeight: "600" }}>
-                  Cancel
+                <Text
+                  style={{
+                    fontSize: 18,
+                    fontWeight: "700",
+                    color: "#1B2A4A",
+                    marginBottom: 12,
+                  }}
+                >
+                  Request Game
                 </Text>
-              </TouchableOpacity>
-              <TouchableOpacity
-                onPress={sendRequest}
-                disabled={sending}
-                style={{
-                  flex: 1,
-                  backgroundColor: sending ? "#9CA3AF" : "#F97316",
-                  borderRadius: 8,
-                  padding: 12,
-                  alignItems: "center",
-                }}
-              >
-                {sending ? (
-                  <ActivityIndicator size="small" color="#FFFFFF" />
-                ) : (
-                  <Text style={{ color: "#FFFFFF", fontWeight: "600" }}>
-                    Send Request
+                {selectedSlot && (
+                  <Text
+                    style={{ fontSize: 14, color: "#6B7280", marginBottom: 16 }}
+                  >
+                    {new Date(
+                      selectedSlot.date + " " + selectedSlot.time_start,
+                    ).toLocaleDateString()}{" "}
+                    at{" "}
+                    {moment(selectedSlot.time_start, "HH:mm:ss").format(
+                      "h:mm A",
+                    )}
                   </Text>
                 )}
-              </TouchableOpacity>
+
+                {/* Venue */}
+                {selectedSlot &&
+                  school &&
+                  (() => {
+                    const resolved: ResolvedVenue = resolveVenue({
+                      pref:
+                        (selectedSlot.home_away_preference as HomeAwayPref) ||
+                        "either",
+                      slotVenue: selectedSlot.venue,
+                      coachSchool: {
+                        name: school.name,
+                        address: school.address,
+                        city: school.city,
+                        state: school.state,
+                      },
+                      requesterSchool: requesterSchool
+                        ? {
+                            name: requesterSchool.name,
+                            address: requesterSchool.address,
+                            city: requesterSchool.city,
+                            state: requesterSchool.state,
+                          }
+                        : null,
+                    });
+                    return (
+                      <View style={{ marginBottom: 16 }}>
+                        <Text
+                          style={{
+                            fontSize: 13,
+                            fontWeight: "600",
+                            color: "#374151",
+                            marginBottom: 6,
+                          }}
+                        >
+                          Venue
+                        </Text>
+                        {resolved.editable ? (
+                          <>
+                            <TextInput
+                              style={{
+                                borderWidth: 1,
+                                borderColor: "#D1D5DB",
+                                borderRadius: 8,
+                                padding: 12,
+                                fontSize: 14,
+                              }}
+                              placeholder="Suggest a venue"
+                              placeholderTextColor="#9CA3AF"
+                              value={venueInput}
+                              onChangeText={setVenueInput}
+                            />
+                            <Text
+                              style={{
+                                fontSize: 11,
+                                color: "#9CA3AF",
+                                marginTop: 4,
+                              }}
+                            >
+                              You can change this later until the coach accepts.
+                            </Text>
+                          </>
+                        ) : (
+                          <View
+                            style={{
+                              backgroundColor: "#F3F4F6",
+                              borderRadius: 8,
+                              padding: 12,
+                            }}
+                          >
+                            <Text style={{ fontSize: 14, color: "#1B2A4A" }}>
+                              {resolved.display}
+                            </Text>
+                            <Text
+                              style={{
+                                fontSize: 11,
+                                color: "#9CA3AF",
+                                marginTop: 2,
+                              }}
+                            >
+                              {resolved.isSchoolAddressFallback
+                                ? "Using the host school's address"
+                                : "Set by coach"}
+                            </Text>
+                          </View>
+                        )}
+                      </View>
+                    );
+                  })()}
+
+                <TextInput
+                  style={{
+                    borderWidth: 1,
+                    borderColor: "#D1D5DB",
+                    borderRadius: 8,
+                    padding: 12,
+                    fontSize: 14,
+                    marginBottom: 16,
+                    minHeight: 80,
+                    textAlignVertical: "top",
+                  }}
+                  placeholder="Add a message (optional)"
+                  placeholderTextColor="#9CA3AF"
+                  value={message}
+                  onChangeText={setMessage}
+                  multiline
+                />
+                <View style={{ flexDirection: "row", gap: 12 }}>
+                  <TouchableOpacity
+                    onPress={() => setShowRequestModal(false)}
+                    style={{
+                      flex: 1,
+                      borderWidth: 1,
+                      borderColor: "#D1D5DB",
+                      borderRadius: 8,
+                      padding: 12,
+                      alignItems: "center",
+                    }}
+                  >
+                    <Text style={{ color: "#6B7280", fontWeight: "600" }}>
+                      Cancel
+                    </Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity
+                    onPress={sendRequest}
+                    disabled={sending}
+                    style={{
+                      flex: 1,
+                      backgroundColor: sending ? "#9CA3AF" : "#F97316",
+                      borderRadius: 8,
+                      padding: 12,
+                      alignItems: "center",
+                    }}
+                  >
+                    {sending ? (
+                      <ActivityIndicator size="small" color="#FFFFFF" />
+                    ) : (
+                      <Text style={{ color: "#FFFFFF", fontWeight: "600" }}>
+                        Send Request
+                      </Text>
+                    )}
+                  </TouchableOpacity>
+                </View>
+              </View>
             </View>
-          </View>
-        </View>
+          </KeyboardAvoidingView>
+        </TouchableWithoutFeedback>
       </Modal>
     </>
   );

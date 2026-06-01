@@ -55,6 +55,11 @@ export default function RequestDetailScreen() {
   const [acceptVenueDraft, setAcceptVenueDraft] = useState("");
   const [accepting, setAccepting] = useState(false);
 
+  // Cancel game modal
+  const [cancelModalVisible, setCancelModalVisible] = useState(false);
+  const [cancelReason, setCancelReason] = useState("");
+  const [cancelling, setCancelling] = useState(false);
+
   const fetchRequest = async () => {
     if (!id) return;
     const { data: requestData } = await supabase
@@ -178,6 +183,28 @@ export default function RequestDetailScreen() {
     setAccepting(false);
   };
 
+  const handleCancel = async () => {
+    if (!id || !cancelReason.trim()) return;
+    setCancelling(true);
+    const { error } = await supabase
+      .from("requests")
+      .update({
+        status: "cancelled",
+        cancellation_reason: cancelReason.trim(),
+        cancelled_at: new Date().toISOString(),
+        cancelled_by: profile?.id,
+      })
+      .eq("id", id);
+    if (error) {
+      Alert.alert("Error", error.message);
+    } else {
+      setCancelModalVisible(false);
+      setCancelReason("");
+      fetchRequest();
+    }
+    setCancelling(false);
+  };
+
   const handleMessage = async () => {
     // Navigate to chat with the other coach
     if (!request || !profile) return;
@@ -240,6 +267,7 @@ export default function RequestDetailScreen() {
   const isIncoming = request.recipient_id === profile?.id;
   const isPending = request.status === "pending";
   const isAccepted = request.status === "accepted";
+  const isCancelled = request.status === "cancelled";
 
   const displaySchool = isIncoming
     ? request.requester_school
@@ -263,7 +291,9 @@ export default function RequestDetailScreen() {
                     ? "#F0FDF4"
                     : request.status === "declined"
                       ? "#FEE2E2"
-                      : "#F3F4F6",
+                      : request.status === "cancelled"
+                        ? "#F3F4F6"
+                        : "#F3F4F6",
               paddingHorizontal: 12,
               paddingVertical: 6,
               borderRadius: 12,
@@ -282,12 +312,50 @@ export default function RequestDetailScreen() {
                       ? "#10B981"
                       : request.status === "declined"
                         ? "#EF4444"
-                        : "#6B7280",
+                        : request.status === "cancelled"
+                          ? "#6B7280"
+                          : "#6B7280",
               }}
             >
               {request.status.charAt(0).toUpperCase() + request.status.slice(1)}
             </Text>
           </View>
+
+          {/* Cancellation reason for cancelled games */}
+          {isCancelled && request.cancellation_reason && (
+            <View
+              style={{
+                backgroundColor: "#FEF2F2",
+                borderRadius: 12,
+                padding: 16,
+                marginBottom: 16,
+                borderLeftWidth: 4,
+                borderLeftColor: "#EF4444",
+              }}
+            >
+              <Text
+                style={{
+                  fontSize: 13,
+                  fontWeight: "600",
+                  color: "#991B1B",
+                  marginBottom: 4,
+                }}
+              >
+                Game Cancelled
+              </Text>
+              <Text style={{ fontSize: 14, color: "#7F1D1D" }}>
+                Reason: {request.cancellation_reason}
+              </Text>
+              {request.cancelled_at && (
+                <Text style={{ fontSize: 12, color: "#9CA3AF", marginTop: 4 }}>
+                  Cancelled{" "}
+                  {moment(request.cancelled_at).format(
+                    "MMM D, YYYY [at] h:mm A",
+                  )}
+                </Text>
+              )}
+            </View>
+          )}
 
           {/* Sport */}
           <Text style={{ fontSize: 28, fontWeight: "800", color: "#1B2A4A" }}>
@@ -553,6 +621,26 @@ export default function RequestDetailScreen() {
             </Text>
           </TouchableOpacity>
 
+          {/* Cancel Game button for accepted requests */}
+          {isAccepted && (
+            <TouchableOpacity
+              onPress={() => setCancelModalVisible(true)}
+              style={{
+                backgroundColor: "#EF4444",
+                borderRadius: 8,
+                padding: 14,
+                alignItems: "center",
+                marginTop: 12,
+              }}
+            >
+              <Text
+                style={{ color: "#FFFFFF", fontWeight: "700", fontSize: 16 }}
+              >
+                Cancel Game
+              </Text>
+            </TouchableOpacity>
+          )}
+
           {/* Export to Calendar for accepted requests */}
           {isAccepted && (
             <TouchableOpacity
@@ -689,6 +777,113 @@ export default function RequestDetailScreen() {
                 ) : (
                   <Text style={{ color: "#FFFFFF", fontWeight: "600" }}>
                     Accept
+                  </Text>
+                )}
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      {/* Cancel game modal */}
+      <Modal
+        visible={cancelModalVisible}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setCancelModalVisible(false)}
+      >
+        <View
+          style={{
+            flex: 1,
+            backgroundColor: "rgba(0, 0, 0, 0.5)",
+            justifyContent: "center",
+            alignItems: "center",
+            padding: 20,
+          }}
+        >
+          <View
+            style={{
+              backgroundColor: "#FFFFFF",
+              borderRadius: 12,
+              padding: 20,
+              width: "100%",
+              maxWidth: 400,
+            }}
+          >
+            <Text
+              style={{
+                fontSize: 18,
+                fontWeight: "700",
+                color: "#1B2A4A",
+                marginBottom: 12,
+              }}
+            >
+              Cancel Game
+            </Text>
+            <Text style={{ fontSize: 14, color: "#6B7280", marginBottom: 16 }}>
+              Please provide a reason for cancelling. This will be shared with
+              the other coach.
+            </Text>
+            <Text
+              style={{
+                fontSize: 13,
+                fontWeight: "600",
+                color: "#374151",
+                marginBottom: 6,
+              }}
+            >
+              Reason for cancellation *
+            </Text>
+            <TextInput
+              style={{
+                borderWidth: 1,
+                borderColor: "#D1D5DB",
+                borderRadius: 8,
+                padding: 12,
+                fontSize: 14,
+                marginBottom: 16,
+                minHeight: 80,
+                textAlignVertical: "top",
+              }}
+              placeholder="e.g., Weather conditions, team illness, scheduling conflict..."
+              placeholderTextColor="#9CA3AF"
+              value={cancelReason}
+              onChangeText={setCancelReason}
+              multiline
+            />
+            <View style={{ flexDirection: "row", gap: 12 }}>
+              <TouchableOpacity
+                onPress={() => setCancelModalVisible(false)}
+                style={{
+                  flex: 1,
+                  borderWidth: 1,
+                  borderColor: "#D1D5DB",
+                  borderRadius: 8,
+                  padding: 12,
+                  alignItems: "center",
+                }}
+              >
+                <Text style={{ color: "#6B7280", fontWeight: "600" }}>
+                  Never Mind
+                </Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                onPress={handleCancel}
+                disabled={cancelling || !cancelReason.trim()}
+                style={{
+                  flex: 1,
+                  backgroundColor:
+                    cancelling || !cancelReason.trim() ? "#9CA3AF" : "#EF4444",
+                  borderRadius: 8,
+                  padding: 12,
+                  alignItems: "center",
+                }}
+              >
+                {cancelling ? (
+                  <ActivityIndicator size="small" color="#FFFFFF" />
+                ) : (
+                  <Text style={{ color: "#FFFFFF", fontWeight: "600" }}>
+                    Cancel Game
                   </Text>
                 )}
               </TouchableOpacity>

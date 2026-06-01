@@ -449,6 +449,9 @@ export type Database = {
       requests: {
         Row: {
           availability_id: string | null;
+          cancelled_at: string | null;
+          cancelled_by: string | null;
+          cancellation_reason: string | null;
           counter_proposal: Json | null;
           created_at: string;
           date: string;
@@ -469,6 +472,9 @@ export type Database = {
         };
         Insert: {
           availability_id?: string | null;
+          cancelled_at?: string | null;
+          cancelled_by?: string | null;
+          cancellation_reason?: string | null;
           counter_proposal?: Json | null;
           created_at?: string;
           date: string;
@@ -489,6 +495,9 @@ export type Database = {
         };
         Update: {
           availability_id?: string | null;
+          cancelled_at?: string | null;
+          cancelled_by?: string | null;
+          cancellation_reason?: string | null;
           counter_proposal?: Json | null;
           created_at?: string;
           date?: string;

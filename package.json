@@ -1,6 +1,6 @@
 {
   "name": "daylo-app",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "main": "expo-router/entry",
   "scripts": {
     "start": "expo start -c",
@@ -25,7 +25,7 @@
     "@trpc/react-query": "^11.16.0",
     "@trpc/server": "^11.16.0",
     "expo": "~54.0.34",
-    "expo-av": "~16.0.8",
+    "expo-video": "~2.0.6",
     "expo-calendar": "~15.0.8",
     "expo-constants": "~18.0.13",
     "expo-dev-client": "~6.0.21",

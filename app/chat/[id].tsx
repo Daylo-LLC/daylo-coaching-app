@@ -25,13 +25,30 @@ import {
   Flag,
 } from "lucide-react-native";
 import { Image as ExpoImage } from "expo-image";
-import { Video, ResizeMode } from "expo-av";
+import { VideoView, useVideoPlayer } from "expo-video";
 import * as Linking from "expo-linking";
 import PageHeader from "@/components/PageHeader";
 
 type Message = Tables<"messages">;
 
 const MAX_FILE_SIZE = 50 * 1024 * 1024; // 50MB (allow videos)
+
+// Video player component for expo-video
+function VideoPlayer({ uri, style }: { uri: string; style: any }) {
+  const player = useVideoPlayer(uri, (player) => {
+    player.loop = false;
+  });
+
+  return (
+    <VideoView
+      player={player}
+      style={style}
+      nativeControls
+      contentFit="contain"
+      allowsFullscreen
+    />
+  );
+}
 
 const guessMimeFromName = (name: string, fallback: string): string => {
   const ext = name.split(".").pop()?.toLowerCase();
@@ -64,7 +81,6 @@ export default function ChatScreen() {
   const [modalImageUrl, setModalImageUrl] = useState<string | null>(null);
   const [reportModalVisible, setReportModalVisible] = useState(false);
   const [selectedMessage, setSelectedMessage] = useState<Message | null>(null);
-  const videoRef = useRef<Video>(null);
 
   const fetchMessages = useCallback(async () => {
     if (!conversationId) return;
@@ -498,13 +514,9 @@ export default function ChatScreen() {
                     )}
                     {item.file_url && item.file_type?.startsWith("video/") && (
                       <View style={{ marginTop: item.content ? 8 : 0 }}>
-                        <Video
-                          ref={videoRef}
-                          source={{ uri: item.file_url }}
+                        <VideoPlayer
+                          uri={item.file_url}
                           style={{ width: 280, height: 200, borderRadius: 12 }}
-                          useNativeControls
-                          resizeMode={ResizeMode.CONTAIN}
-                          isLooping={false}
                         />
                       </View>
                     )}

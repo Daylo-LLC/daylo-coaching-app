@@ -54,6 +54,7 @@ export default function NotificationsScreen() {
       case "new_request":
       case "request_accepted":
       case "request_declined":
+      case "game_cancelled":
         if (data?.request_id) {
           router.push(`/request/${data.request_id}`);
         }
