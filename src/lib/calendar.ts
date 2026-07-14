@@ -5,7 +5,7 @@ interface GameEvent {
   title: string;
   date: string;
   timeStart: string;
-  timeEnd: string;
+  timeEnd?: string | null;
   venue?: string | null;
   sport: string;
   notes?: string;
@@ -77,7 +77,9 @@ export async function exportGameToCalendar(game: GameEvent): Promise<boolean> {
     if (!calendarId) return false;
 
     const startDate = parseDateTime(game.date, game.timeStart);
-    const endDate = parseDateTime(game.date, game.timeEnd);
+    const endDate = game.timeEnd
+      ? parseDateTime(game.date, game.timeEnd)
+      : new Date(startDate.getTime() + 60 * 60 * 1000);
 
     const sportLabel = game.sport.charAt(0).toUpperCase() + game.sport.slice(1);
     const title = game.opponentSchool
@@ -115,7 +117,9 @@ export async function exportMultipleGames(games: GameEvent[]): Promise<number> {
   for (const game of games) {
     try {
       const startDate = parseDateTime(game.date, game.timeStart);
-      const endDate = parseDateTime(game.date, game.timeEnd);
+      const endDate = game.timeEnd
+        ? parseDateTime(game.date, game.timeEnd)
+        : new Date(startDate.getTime() + 60 * 60 * 1000);
 
       const sportLabel =
         game.sport.charAt(0).toUpperCase() + game.sport.slice(1);

@@ -12,6 +12,10 @@ import { useRouter, useFocusEffect } from "expo-router";
 import moment from "moment";
 import { useAuthStore } from "../../../src/store/auth";
 import { supabase } from "../../../src/lib/supabase";
+import {
+  fetchScheduledGames,
+  scheduledGameSchool,
+} from "../../../src/lib/scheduledGames";
 
 type RequestRow = {
   id: string;
@@ -38,7 +42,8 @@ type AgendaItem = {
   sport: string;
   gender: string;
   home_away: string;
-  requestId: string;
+  requestId?: string;
+  scheduledGameId?: string;
 };
 
 const STATUS_COLORS = {
@@ -64,18 +69,22 @@ export default function CalendarScreen() {
   const fetchRequests = useCallback(async () => {
     if (!profile) return;
     setLoading(true);
-    const { data, error } = await supabase
-      .from("requests")
-      .select(
-        `id, requester_id, recipient_id, requester_school_id, recipient_school_id,
+    const [requestsResult, scheduledResult] = await Promise.all([
+      supabase
+        .from("requests")
+        .select(
+          `id, requester_id, recipient_id, requester_school_id, recipient_school_id,
          sport, gender, date, time_start, time_end, home_away, venue, status,
          requester_school:schools!requests_requester_school_id_fkey(name),
          recipient_school:schools!requests_recipient_school_id_fkey(name)`,
-      )
-      .or(`requester_id.eq.${profile.id},recipient_id.eq.${profile.id}`)
-      .in("status", ["accepted", "pending"])
-      .order("date", { ascending: true });
+        )
+        .or(`requester_id.eq.${profile.id},recipient_id.eq.${profile.id}`)
+        .in("status", ["accepted", "pending"])
+        .order("date", { ascending: true }),
+      fetchScheduledGames(profile.school_id || ""),
+    ]);
 
+    const { data, error } = requestsResult;
     if (error) {
       console.warn("calendar fetch error", error.message);
       setLoading(false);
@@ -103,6 +112,25 @@ export default function CalendarScreen() {
       if (!grouped[r.date]) grouped[r.date] = [];
       grouped[r.date].push(item);
     }
+    for (const game of scheduledResult.data || []) {
+      const opponent = scheduledGameSchool(game, profile.school_id);
+      const item: AgendaItem = {
+        name: `vs. ${opponent?.name || "Unknown"}`,
+        type: "accepted",
+        time: game.time_end
+          ? `${fmtTime(game.time_start)} – ${fmtTime(game.time_end)}`
+          : fmtTime(game.time_start),
+        sport: game.sport,
+        gender: game.gender,
+        home_away: game.home_school_id === profile.school_id ? "home" : "away",
+        scheduledGameId: game.id,
+      };
+      if (!grouped[game.date]) grouped[game.date] = [];
+      grouped[game.date].push(item);
+    }
+    Object.values(grouped).forEach((items) =>
+      items.sort((a, b) => a.time.localeCompare(b.time)),
+    );
     setItemsByDate(grouped);
     setLoading(false);
   }, [profile]);
@@ -155,7 +183,13 @@ export default function CalendarScreen() {
     const accent = STATUS_COLORS[item.type];
     return (
       <TouchableOpacity
-        onPress={() => router.push(`/request/${item.requestId}`)}
+        onPress={() =>
+          router.push(
+            item.scheduledGameId
+              ? `/scheduled-game/${item.scheduledGameId}`
+              : `/request/${item.requestId}`,
+          )
+        }
         style={{
           backgroundColor: "#FFFFFF",
           marginHorizontal: 16,
@@ -292,7 +326,9 @@ export default function CalendarScreen() {
       </View>
       <FlatList
         data={selectedItems}
-        keyExtractor={(i) => i.requestId}
+        keyExtractor={(i) =>
+          i.scheduledGameId || i.requestId || `${i.name}-${i.time}`
+        }
         renderItem={renderItem}
         contentContainerStyle={{ paddingBottom: 32 }}
         refreshControl={

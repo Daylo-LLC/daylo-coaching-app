@@ -18,6 +18,11 @@ import { supabase } from "../../../src/lib/supabase";
 import { Tables } from "../../../src/types/database";
 import Header from "@/components/Header";
 import { Calendar, MapPin } from "lucide-react-native";
+import {
+  fetchScheduledGames,
+  scheduledGameSchool,
+  type ScheduledGame,
+} from "../../../src/lib/scheduledGames";
 
 type Request = Tables<"requests"> & {
   requester_school?: {
@@ -43,6 +48,7 @@ export default function Home() {
   const { profile } = useAuthStore();
   const [upcomingGames, setUpcomingGames] = useState<Request[]>([]);
   const [pendingRequests, setPendingRequests] = useState<Request[]>([]);
+  const [scheduledGames, setScheduledGames] = useState<ScheduledGame[]>([]);
   const [school, setSchool] = useState<SchoolWithCoachSchools | null>(null);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -55,37 +61,40 @@ export default function Home() {
 
     const today = new Date().toISOString().split("T")[0];
 
-    const [gamesRes, requestsRes, slotsRes, schoolRes] = await Promise.all([
-      supabase
-        .from("requests")
-        .select("*")
-        .eq("status", "accepted")
-        .or(`requester_id.eq.${profile.id},recipient_id.eq.${profile.id}`)
-        .gte("date", today)
-        .order("date", { ascending: true })
-        .limit(5),
-      supabase
-        .from("requests")
-        .select("*")
-        .eq("status", "pending")
-        .eq("recipient_id", profile.id)
-        .order("created_at", { ascending: false })
-        .limit(5),
-      supabase
-        .from("availability")
-        .select("*")
-        .eq("coach_id", profile.id)
-        .eq("is_booked", false)
-        .gte("date", today)
-        .order("date", { ascending: true })
-        .limit(5),
-      supabase
-        .from("schools")
-        .select("*, coach_schools (sport)")
-        .eq("id", profile.school_id),
-    ]);
+    const [gamesRes, requestsRes, slotsRes, schoolRes, scheduledRes] =
+      await Promise.all([
+        supabase
+          .from("requests")
+          .select("*")
+          .eq("status", "accepted")
+          .or(`requester_id.eq.${profile.id},recipient_id.eq.${profile.id}`)
+          .gte("date", today)
+          .order("date", { ascending: true })
+          .limit(5),
+        supabase
+          .from("requests")
+          .select("*")
+          .eq("status", "pending")
+          .eq("recipient_id", profile.id)
+          .order("created_at", { ascending: false })
+          .limit(5),
+        supabase
+          .from("availability")
+          .select("*")
+          .eq("coach_id", profile.id)
+          .eq("is_booked", false)
+          .gte("date", today)
+          .order("date", { ascending: true })
+          .limit(5),
+        supabase
+          .from("schools")
+          .select("*, coach_schools (sport)")
+          .eq("id", profile.school_id),
+        fetchScheduledGames(profile.school_id),
+      ]);
 
     setSchool(schoolRes.data?.[0] || null);
+    setScheduledGames(scheduledRes.data || []);
 
     // Collect all school IDs from both accepted games and pending requests
     const allRequests = [...(gamesRes.data || []), ...(requestsRes.data || [])];
@@ -158,14 +167,18 @@ export default function Home() {
               {school?.county} • {school?.division}
             </Text>
           </View>
-          <View style={{ width: "30%" }}>
+          <View style={{ width: "30%", gap: 8 }}>
             <Pressable
               style={styles.addButton}
-              onPress={() => {
-                router.push("/search");
-              }}
+              onPress={() => router.push("/search")}
             >
-              <Text style={styles.buttonText}>Add Game</Text>
+              <Text style={styles.buttonText}>Find Game</Text>
+            </Pressable>
+            <Pressable
+              style={[styles.addButton, { backgroundColor: "#F97316" }]}
+              onPress={() => router.push("/enter-game")}
+            >
+              <Text style={styles.buttonText}>Enter Game</Text>
             </Pressable>
           </View>
         </View>
@@ -225,46 +238,139 @@ export default function Home() {
               >
                 Season Schedule
               </Text>
-              {upcomingGames.length === 0 ? (
+              {upcomingGames.length === 0 && scheduledGames.length === 0 ? (
                 <Text style={{ color: "#9CA3AF", fontSize: 14 }}>
                   No upcoming games scheduled
                 </Text>
               ) : (
-                upcomingGames.map((game) => {
-                  const opposingSchool =
-                    game.requester_id === profile?.id
-                      ? game.recipient_school
-                      : game.requester_school;
-                  return (
-                    <View
-                      key={game.id}
-                      style={{
-                        borderBottomWidth: 1,
-                        borderBottomColor: "#F3F4F6",
-                        paddingVertical: 10,
-                        flexDirection: "row",
-                        justifyContent: "flex-start",
-                        alignItems: "center",
-                        gap: 8,
-                      }}
-                    >
-                      <Calendar size={40} color="#F97316" />
-                      <TouchableOpacity
-                        style={{ flex: 1 }}
-                        onPress={() => router.push(`/request/${game.id}`)}
+                <>
+                  {upcomingGames.map((game) => {
+                    const opposingSchool =
+                      game.requester_id === profile?.id
+                        ? game.recipient_school
+                        : game.requester_school;
+                    return (
+                      <View
+                        key={game.id}
+                        style={{
+                          borderBottomWidth: 1,
+                          borderBottomColor: "#F3F4F6",
+                          paddingVertical: 10,
+                          flexDirection: "row",
+                          justifyContent: "flex-start",
+                          alignItems: "center",
+                          gap: 8,
+                        }}
                       >
-                        <Text
-                          style={{
-                            fontSize: 14,
-                            fontWeight: "600",
-                            color: "#374151",
-                          }}
+                        <Calendar size={40} color="#F97316" />
+                        <TouchableOpacity
+                          style={{ flex: 1 }}
+                          onPress={() => router.push(`/request/${game.id}`)}
                         >
-                          {game.sport.charAt(0).toUpperCase() +
-                            game.sport.slice(1)}{" "}
-                          — {moment(game.date).format("MMM D, YYYY")}
-                        </Text>
-                        {opposingSchool && (
+                          <Text
+                            style={{
+                              fontSize: 14,
+                              fontWeight: "600",
+                              color: "#374151",
+                            }}
+                          >
+                            {game.sport.charAt(0).toUpperCase() +
+                              game.sport.slice(1)}{" "}
+                            — {moment(game.date).format("MMM D, YYYY")}
+                          </Text>
+                          {opposingSchool && (
+                            <Text
+                              style={{
+                                fontSize: 12,
+                                color: "#6B7280",
+                                marginTop: 2,
+                              }}
+                            >
+                              vs. {opposingSchool.name}
+                            </Text>
+                          )}
+                          <Text
+                            style={{
+                              fontSize: 12,
+                              color: "#9CA3AF",
+                              marginTop: 2,
+                            }}
+                          >
+                            {moment(game.time_start, "HH:mm").format("h:mm A")}{" "}
+                            – {moment(game.time_end, "HH:mm").format("h:mm A")}
+                            {game.venue && game.venue.length <= 20
+                              ? ` • ${game.venue}`
+                              : ""}
+                          </Text>
+                          {game.venue && game.venue.length > 20 && (
+                            <View
+                              style={{
+                                flexDirection: "row",
+                                alignItems: "flex-start",
+                                marginTop: 2,
+                                flexShrink: 1,
+                              }}
+                            >
+                              <MapPin
+                                size={12}
+                                color="#9CA3AF"
+                                style={{ marginTop: 2, marginRight: 4 }}
+                              />
+                              <Text
+                                style={{
+                                  fontSize: 11,
+                                  color: "#9CA3AF",
+                                  flex: 1,
+                                  flexWrap: "wrap",
+                                }}
+                              >
+                                {game.venue}
+                              </Text>
+                            </View>
+                          )}
+                        </TouchableOpacity>
+                      </View>
+                    );
+                  })}
+                  {scheduledGames.map((game) => {
+                    const opposingSchool = scheduledGameSchool(
+                      game,
+                      profile?.school_id,
+                    );
+                    const opponentClaimed =
+                      profile?.school_id === game.home_school_id
+                        ? Boolean(game.away_coach_id)
+                        : Boolean(game.home_coach_id);
+                    return (
+                      <View
+                        key={`scheduled-${game.id}`}
+                        style={{
+                          borderBottomWidth: 1,
+                          borderBottomColor: "#F3F4F6",
+                          paddingVertical: 10,
+                          flexDirection: "row",
+                          alignItems: "center",
+                          gap: 8,
+                        }}
+                      >
+                        <Calendar size={40} color="#10B981" />
+                        <TouchableOpacity
+                          style={{ flex: 1 }}
+                          onPress={() =>
+                            router.push(`/scheduled-game/${game.id}`)
+                          }
+                        >
+                          <Text
+                            style={{
+                              fontSize: 14,
+                              fontWeight: "600",
+                              color: "#374151",
+                            }}
+                          >
+                            {game.sport.charAt(0).toUpperCase() +
+                              game.sport.slice(1)}{" "}
+                            — {moment(game.date).format("MMM D, YYYY")}
+                          </Text>
                           <Text
                             style={{
                               fontSize: 12,
@@ -272,52 +378,24 @@ export default function Home() {
                               marginTop: 2,
                             }}
                           >
-                            vs. {opposingSchool.name}
+                            vs. {opposingSchool?.name || "Unknown"}
                           </Text>
-                        )}
-                        <Text
-                          style={{
-                            fontSize: 12,
-                            color: "#9CA3AF",
-                            marginTop: 2,
-                          }}
-                        >
-                          {moment(game.time_start, "HH:mm").format("h:mm A")} –{" "}
-                          {moment(game.time_end, "HH:mm").format("h:mm A")}
-                          {game.venue && game.venue.length <= 20
-                            ? ` • ${game.venue}`
-                            : ""}
-                        </Text>
-                        {game.venue && game.venue.length > 20 && (
-                          <View
+                          <Text
                             style={{
-                              flexDirection: "row",
-                              alignItems: "flex-start",
+                              fontSize: 12,
+                              color: opponentClaimed ? "#10B981" : "#F97316",
                               marginTop: 2,
-                              flexShrink: 1,
                             }}
                           >
-                            <MapPin
-                              size={12}
-                              color="#9CA3AF"
-                              style={{ marginTop: 2, marginRight: 4 }}
-                            />
-                            <Text
-                              style={{
-                                fontSize: 11,
-                                color: "#9CA3AF",
-                                flex: 1,
-                                flexWrap: "wrap",
-                              }}
-                            >
-                              {game.venue}
-                            </Text>
-                          </View>
-                        )}
-                      </TouchableOpacity>
-                    </View>
-                  );
-                })
+                            {opponentClaimed
+                              ? "Opponent acknowledged"
+                              : "Opponent coach not on Daylo yet"}
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+                    );
+                  })}
+                </>
               )}
             </View>
           </>
@@ -363,54 +441,119 @@ export default function Home() {
                   </Text>
                 </TouchableOpacity>
               </View>
-              {pendingRequests.length === 0 ? (
+              {pendingRequests.length === 0 &&
+              scheduledGames.filter((game) => {
+                const ownSideUnclaimed =
+                  profile?.school_id === game.home_school_id
+                    ? !game.home_coach_id
+                    : !game.away_coach_id;
+                return (
+                  ownSideUnclaimed && game.entered_by_coach_id !== profile?.id
+                );
+              }).length === 0 ? (
                 <Text style={{ color: "#9CA3AF", fontSize: 14 }}>
                   No pending requests
                 </Text>
               ) : (
-                pendingRequests.map((req) => (
-                  <View
-                    key={req.id}
-                    style={{
-                      borderBottomWidth: 1,
-                      borderBottomColor: "#F3F4F6",
-                      paddingVertical: 10,
-                    }}
-                  >
-                    <TouchableOpacity
-                      onPress={() => router.push(`/request/${req.id}`)}
-                    >
-                      <Text
+                <>
+                  {scheduledGames
+                    .filter((game) => {
+                      const ownSideUnclaimed =
+                        profile?.school_id === game.home_school_id
+                          ? !game.home_coach_id
+                          : !game.away_coach_id;
+                      return (
+                        ownSideUnclaimed &&
+                        game.entered_by_coach_id !== profile?.id
+                      );
+                    })
+                    .map((game) => (
+                      <View
+                        key={`ack-${game.id}`}
                         style={{
-                          fontSize: 14,
-                          fontWeight: "600",
-                          color: "#374151",
+                          borderBottomWidth: 1,
+                          borderBottomColor: "#F3F4F6",
+                          paddingVertical: 10,
                         }}
                       >
-                        {req.sport.charAt(0).toUpperCase() + req.sport.slice(1)}{" "}
-                        — {moment(req.date).format("MMM D, YYYY")}
-                      </Text>
-                      {req.requester_school && (
+                        <TouchableOpacity
+                          onPress={() =>
+                            router.push(`/scheduled-game/${game.id}`)
+                          }
+                        >
+                          <Text
+                            style={{
+                              fontSize: 14,
+                              fontWeight: "600",
+                              color: "#374151",
+                            }}
+                          >
+                            Scheduled game to acknowledge
+                          </Text>
+                          <Text
+                            style={{
+                              fontSize: 12,
+                              color: "#6B7280",
+                              marginTop: 2,
+                            }}
+                          >
+                            vs.{" "}
+                            {scheduledGameSchool(game, profile?.school_id)
+                              ?.name || "Unknown"}{" "}
+                            · {moment(game.date).format("MMM D, YYYY")}
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+                    ))}
+                  {pendingRequests.map((req) => (
+                    <View
+                      key={req.id}
+                      style={{
+                        borderBottomWidth: 1,
+                        borderBottomColor: "#F3F4F6",
+                        paddingVertical: 10,
+                      }}
+                    >
+                      <TouchableOpacity
+                        onPress={() => router.push(`/request/${req.id}`)}
+                      >
+                        <Text
+                          style={{
+                            fontSize: 14,
+                            fontWeight: "600",
+                            color: "#374151",
+                          }}
+                        >
+                          {req.sport.charAt(0).toUpperCase() +
+                            req.sport.slice(1)}{" "}
+                          — {moment(req.date).format("MMM D, YYYY")}
+                        </Text>
+                        {req.requester_school && (
+                          <Text
+                            style={{
+                              fontSize: 12,
+                              color: "#6B7280",
+                              marginTop: 2,
+                            }}
+                          >
+                            From: {req.requester_school.name}
+                          </Text>
+                        )}
                         <Text
                           style={{
                             fontSize: 12,
-                            color: "#6B7280",
+                            color: "#9CA3AF",
                             marginTop: 2,
                           }}
                         >
-                          From: {req.requester_school.name}
+                          {moment(req.time_start, "HH:mm").format("h:mm A")} –{" "}
+                          {moment(req.time_end, "HH:mm").format("h:mm A")} •{" "}
+                          {req.home_away}
                         </Text>
-                      )}
-                      <Text
-                        style={{ fontSize: 12, color: "#9CA3AF", marginTop: 2 }}
-                      >
-                        {moment(req.time_start, "HH:mm").format("h:mm A")} –{" "}
-                        {moment(req.time_end, "HH:mm").format("h:mm A")} •{" "}
-                        {req.home_away}
-                      </Text>
-                    </TouchableOpacity>
-                  </View>
-                ))
+                      </TouchableOpacity>
+                    </View>
+                  ))}
+                </>
               )}
             </View>
           </>

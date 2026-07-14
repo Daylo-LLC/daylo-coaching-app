@@ -561,6 +561,108 @@ export type Database = {
           },
         ];
       };
+      scheduled_games: {
+        Row: {
+          away_coach_acknowledged_at: string | null;
+          away_coach_id: string | null;
+          away_school_id: string;
+          created_at: string;
+          date: string;
+          entered_by_coach_id: string;
+          gender: string;
+          home_coach_acknowledged_at: string | null;
+          home_coach_id: string | null;
+          home_school_id: string;
+          id: string;
+          notes: string | null;
+          source: string;
+          sport: string;
+          status: string;
+          time_end: string | null;
+          time_start: string;
+          updated_at: string;
+          venue: string | null;
+        };
+        Insert: {
+          away_coach_acknowledged_at?: string | null;
+          away_coach_id?: string | null;
+          away_school_id: string;
+          created_at?: string;
+          date: string;
+          entered_by_coach_id: string;
+          gender?: string;
+          home_coach_acknowledged_at?: string | null;
+          home_coach_id?: string | null;
+          home_school_id: string;
+          id?: string;
+          notes?: string | null;
+          source?: string;
+          sport: string;
+          status?: string;
+          time_end?: string | null;
+          time_start: string;
+          updated_at?: string;
+          venue?: string | null;
+        };
+        Update: {
+          away_coach_acknowledged_at?: string | null;
+          away_coach_id?: string | null;
+          away_school_id?: string;
+          created_at?: string;
+          date?: string;
+          entered_by_coach_id?: string;
+          gender?: string;
+          home_coach_acknowledged_at?: string | null;
+          home_coach_id?: string | null;
+          home_school_id?: string;
+          id?: string;
+          notes?: string | null;
+          source?: string;
+          sport?: string;
+          status?: string;
+          time_end?: string | null;
+          time_start?: string;
+          updated_at?: string;
+          venue?: string | null;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "scheduled_games_away_coach_id_fkey";
+            columns: ["away_coach_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "scheduled_games_away_school_id_fkey";
+            columns: ["away_school_id"];
+            isOneToOne: false;
+            referencedRelation: "schools";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "scheduled_games_entered_by_coach_id_fkey";
+            columns: ["entered_by_coach_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "scheduled_games_home_coach_id_fkey";
+            columns: ["home_coach_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "scheduled_games_home_school_id_fkey";
+            columns: ["home_school_id"];
+            isOneToOne: false;
+            referencedRelation: "schools";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       school_change_requests: {
         Row: {
           coach_id: string;
@@ -753,6 +855,36 @@ export type Database = {
       check_email_exists: { Args: { email_address: string }; Returns: boolean };
       is_admin: { Args: never; Returns: boolean };
       is_approved: { Args: never; Returns: boolean };
+      claim_scheduled_game: {
+        Args: { p_game_id: string };
+        Returns: {
+          away_coach_acknowledged_at: string | null;
+          away_coach_id: string | null;
+          away_school_id: string;
+          created_at: string;
+          date: string;
+          entered_by_coach_id: string;
+          gender: string;
+          home_coach_acknowledged_at: string | null;
+          home_coach_id: string | null;
+          home_school_id: string;
+          id: string;
+          notes: string | null;
+          source: string;
+          sport: string;
+          status: string;
+          time_end: string | null;
+          time_start: string;
+          updated_at: string;
+          venue: string | null;
+        };
+        SetofOptions: {
+          from: "*";
+          to: "scheduled_games";
+          isOneToOne: true;
+          isSetofReturn: false;
+        };
+      };
       search_schools_within_radius: {
         Args: {
           filter_conference?: string;

@@ -179,6 +179,22 @@ export default function RequestDetailScreen() {
     } else {
       setAcceptModalVisible(false);
       fetchRequest();
+      const opponent =
+        profile?.id === request?.requester_id
+          ? request?.recipient_school
+          : request?.requester_school;
+      if (request) {
+        exportGameToCalendar({
+          title: `${request.sport} game`,
+          date: request.date,
+          timeStart: request.time_start,
+          timeEnd: request.time_end,
+          venue: acceptVenueDraft.trim() || null,
+          sport: request.sport,
+          opponentSchool: opponent?.name ?? null,
+          url: `daylo:///request/${request.id}`,
+        });
+      }
     }
     setAccepting(false);
   };

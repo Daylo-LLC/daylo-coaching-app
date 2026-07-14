@@ -14,6 +14,11 @@ import { supabase } from "../../../src/lib/supabase";
 import { Tables } from "../../../src/types/database";
 import { exportGameToCalendar } from "../../../src/lib/calendar";
 import moment from "moment";
+import {
+  fetchScheduledGames,
+  scheduledGameSchool,
+  type ScheduledGame,
+} from "../../../src/lib/scheduledGames";
 
 type Request = Tables<"requests"> & {
   requester_school?: {
@@ -28,18 +33,35 @@ type Request = Tables<"requests"> & {
   };
 };
 
-type Tab = "incoming" | "outgoing" | "confirmed";
+type Tab = "incoming" | "outgoing" | "confirmed" | "acknowledge";
 
 export default function RequestsScreen() {
   const router = useRouter();
   const { profile } = useAuthStore();
   const [tab, setTab] = useState<Tab>("incoming");
   const [requests, setRequests] = useState<Request[]>([]);
+  const [scheduledGames, setScheduledGames] = useState<ScheduledGame[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   const fetchRequests = useCallback(async () => {
     if (!profile) return;
+
+    if (tab === "acknowledge") {
+      const { data } = await fetchScheduledGames(profile.school_id || "");
+      setScheduledGames(
+        (data || []).filter((game) => {
+          const ownSideUnclaimed =
+            profile.school_id === game.home_school_id
+              ? !game.home_coach_id
+              : !game.away_coach_id;
+          return ownSideUnclaimed && game.entered_by_coach_id !== profile.id;
+        }),
+      );
+      setRequests([]);
+      setLoading(false);
+      return;
+    }
 
     let q = supabase.from("requests").select("*");
 
@@ -84,6 +106,7 @@ export default function RequestsScreen() {
     } else {
       setRequests([]);
     }
+    setScheduledGames([]);
 
     setLoading(false);
   }, [profile, tab]);
@@ -100,7 +123,7 @@ export default function RequestsScreen() {
   }, [fetchRequests]);
 
   const handleAction = async (
-    requestId: string,
+    request: Request,
     action: "accepted" | "declined",
   ) => {
     const label = action === "accepted" ? "Accept" : "Decline";
@@ -116,7 +139,7 @@ export default function RequestsScreen() {
             const { error } = await supabase
               .from("requests")
               .update({ status: action })
-              .eq("id", requestId);
+              .eq("id", request.id);
             if (error) {
               if (error.message?.includes("Schedule conflict")) {
                 Alert.alert(
@@ -127,6 +150,22 @@ export default function RequestsScreen() {
                 Alert.alert("Error", error.message);
               }
             } else {
+              if (action === "accepted") {
+                const opponent =
+                  profile?.id === request.requester_id
+                    ? request.recipient_school
+                    : request.requester_school;
+                exportGameToCalendar({
+                  title: `${request.sport} game`,
+                  date: request.date,
+                  timeStart: request.time_start,
+                  timeEnd: request.time_end,
+                  venue: request.venue,
+                  sport: request.sport,
+                  opponentSchool: opponent?.name ?? null,
+                  url: `daylo:///request/${request.id}`,
+                });
+              }
               fetchRequests();
             }
           },
@@ -155,6 +194,41 @@ export default function RequestsScreen() {
       ],
     );
   };
+
+  const renderScheduledGame = ({ item }: { item: ScheduledGame }) => (
+    <TouchableOpacity
+      onPress={() => router.push(`/scheduled-game/${item.id}`)}
+      style={{
+        backgroundColor: "#FFFFFF",
+        borderRadius: 12,
+        padding: 16,
+        marginBottom: 12,
+        shadowColor: "#000",
+        shadowOpacity: 0.05,
+        shadowRadius: 10,
+        elevation: 2,
+      }}
+    >
+      <View style={{ flexDirection: "row", justifyContent: "space-between" }}>
+        <Text style={{ fontSize: 16, fontWeight: "700", color: "#1B2A4A" }}>
+          {item.sport.charAt(0).toUpperCase() + item.sport.slice(1)}
+        </Text>
+        <Text style={{ color: "#F97316", fontWeight: "700" }}>
+          To acknowledge
+        </Text>
+      </View>
+      <Text style={{ fontSize: 14, color: "#374151", marginTop: 8 }}>
+        From: {scheduledGameSchool(item, profile?.school_id)?.name || "Unknown"}
+      </Text>
+      <Text style={{ fontSize: 14, color: "#374151", marginTop: 4 }}>
+        {moment(item.date).format("MMMM D, YYYY")} ·{" "}
+        {moment(item.time_start, "HH:mm:ss").format("h:mm A")}
+      </Text>
+      <Text style={{ color: "#6B7280", marginTop: 4 }}>
+        Open the game to acknowledge it and add it to your schedule.
+      </Text>
+    </TouchableOpacity>
+  );
 
   const renderRequest = ({ item }: { item: Request }) => {
     const isIncoming = item.recipient_id === profile?.id;
@@ -228,7 +302,7 @@ export default function RequestsScreen() {
             <TouchableOpacity
               onPress={(e) => {
                 e.stopPropagation();
-                handleAction(item.id, "accepted");
+                handleAction(item, "accepted");
               }}
               style={{
                 flex: 1,
@@ -245,7 +319,7 @@ export default function RequestsScreen() {
             <TouchableOpacity
               onPress={(e) => {
                 e.stopPropagation();
-                handleAction(item.id, "declined");
+                handleAction(item, "declined");
               }}
               style={{
                 flex: 1,
@@ -321,29 +395,33 @@ export default function RequestsScreen() {
           borderBottomColor: "#E5E7EB",
         }}
       >
-        {(["incoming", "outgoing", "confirmed"] as Tab[]).map((t) => (
-          <TouchableOpacity
-            key={t}
-            onPress={() => setTab(t)}
-            style={{
-              flex: 1,
-              paddingVertical: 15,
-              alignItems: "center",
-              borderBottomWidth: 2,
-              borderBottomColor: tab === t ? "#F97316" : "transparent",
-            }}
-          >
-            <Text
+        {(["incoming", "outgoing", "confirmed", "acknowledge"] as Tab[]).map(
+          (t) => (
+            <TouchableOpacity
+              key={t}
+              onPress={() => setTab(t)}
               style={{
-                fontWeight: "600",
-                color: tab === t ? "#F97316" : "#6B7280",
-                fontSize: 14,
+                flex: 1,
+                paddingVertical: 15,
+                alignItems: "center",
+                borderBottomWidth: 2,
+                borderBottomColor: tab === t ? "#F97316" : "transparent",
               }}
             >
-              {t.charAt(0).toUpperCase() + t.slice(1)}
-            </Text>
-          </TouchableOpacity>
-        ))}
+              <Text
+                style={{
+                  fontWeight: "600",
+                  color: tab === t ? "#F97316" : "#6B7280",
+                  fontSize: 14,
+                }}
+              >
+                {t === "acknowledge"
+                  ? "Acknowledge"
+                  : t.charAt(0).toUpperCase() + t.slice(1)}
+              </Text>
+            </TouchableOpacity>
+          ),
+        )}
       </View>
 
       {loading ? (
@@ -353,8 +431,8 @@ export default function RequestsScreen() {
           <ActivityIndicator size="large" color="#1B2A4A" />
         </View>
       ) : (
-        <FlatList
-          data={requests}
+        <FlatList<any>
+          data={(tab === "acknowledge" ? scheduledGames : requests) as any[]}
           keyExtractor={(item) => item.id}
           contentContainerStyle={{ padding: 16, paddingBottom: 32 }}
           refreshControl={
@@ -371,7 +449,9 @@ export default function RequestsScreen() {
               </Text>
             </View>
           }
-          renderItem={renderRequest}
+          renderItem={
+            tab === "acknowledge" ? renderScheduledGame : renderRequest
+          }
         />
       )}
     </View>
